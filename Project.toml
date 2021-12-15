@@ -1,0 +1,12 @@
+name = "MPIHaloArrays"
+uuid = "e77e6532-e7cc-40ad-aebc-b383a150aff6"
+authors = ["Miller, Samuel <smil@lle.rochester.edu>"]
+version = "0.1.0"
+
+[deps]
+MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195"
+
+
+[compat]
+MPI = ">=0.19"
+julia = ">= 1.6"
