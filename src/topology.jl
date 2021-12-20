@@ -77,10 +77,14 @@ function CartesianTopology(dims::Vector{Int}, periodicity::Vector{Bool}; canreor
     rank = MPI.Comm_rank(comm)
     nprocs = MPI.Comm_size(comm)
 
+    # use reverse(dims) b/c MPI convention in (k, j, i), but the expected order is (i, j, k)
+    mpi_dims = reverse(dims)
+    mpi_periodicity = reverse(periodicity)
+
     @assert length(dims) == length(periodicity) "You must specify periodicity (true/false) for each dimension"
     @assert prod(dims) == nprocs "Too many dimensions for the given number of processes"
 
-    comm_cart = MPI.Cart_create(comm, dims, periodicity .|> Int, canreorder)
+    comm_cart = MPI.Cart_create(comm, mpi_dims, mpi_periodicity .|> Int, canreorder)
     coords = MPI.Cart_coords(comm_cart)
     neighbors = OffsetArray(-ones(Int8,3,3,3), -1:1, -1:1, -1:1)
 
@@ -101,10 +105,10 @@ function CartesianTopology(dims::Vector{Int}, periodicity::Vector{Bool}; canreor
         top, bottom = MPI.Cart_shift(comm_cart, 0, 1)
         left, right = MPI.Cart_shift(comm_cart, 1, 1)
 
-        topright    = offset_coord_to_rank(comm_cart, dims, periodicity, RIGHT, TOP)
-        bottomright = offset_coord_to_rank(comm_cart, dims, periodicity, RIGHT, BOTTOM)
-        topleft     = offset_coord_to_rank(comm_cart, dims, periodicity, LEFT, TOP)
-        bottomleft  = offset_coord_to_rank(comm_cart, dims, periodicity, LEFT, BOTTOM)
+        topright    = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, RIGHT, TOP)
+        bottomright = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, RIGHT, BOTTOM)
+        topleft     = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, LEFT, TOP)
+        bottomleft  = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, LEFT, BOTTOM)
 
         neighbors[:,  1, 0] = [topleft   , top   , topright]
         neighbors[:,  0, 0] = [left      , rank  , right]
@@ -115,24 +119,28 @@ function CartesianTopology(dims::Vector{Int}, periodicity::Vector{Bool}; canreor
         top, bottom = MPI.Cart_shift(comm_cart, 1, 1)
         left, right = MPI.Cart_shift(comm_cart, 2, 1)
 
-        topright    = offset_coord_to_rank(comm_cart, dims, periodicity, RIGHT, TOP,    CENTER)
-        topleft     = offset_coord_to_rank(comm_cart, dims, periodicity, LEFT , TOP,    CENTER)
-        bottomright = offset_coord_to_rank(comm_cart, dims, periodicity, RIGHT, BOTTOM, CENTER)
-        bottomleft  = offset_coord_to_rank(comm_cart, dims, periodicity, LEFT , BOTTOM, CENTER)
+        topright    = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, RIGHT, TOP,    CENTER)
+        topleft     = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, LEFT , TOP,    CENTER)
+        bottomright = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, RIGHT, BOTTOM, CENTER)
+        bottomleft  = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, LEFT , BOTTOM, CENTER)
 
-        fronttop         = offset_coord_to_rank(comm_cart, dims, periodicity, CENTER, TOP,    FRONT)
-        frontbottom      = offset_coord_to_rank(comm_cart, dims, periodicity, CENTER, BOTTOM, FRONT)
-        fronttopright    = offset_coord_to_rank(comm_cart, dims, periodicity, RIGHT,  TOP,    FRONT)
-        frontbottomright = offset_coord_to_rank(comm_cart, dims, periodicity, RIGHT,  BOTTOM, FRONT)
-        fronttopleft     = offset_coord_to_rank(comm_cart, dims, periodicity, LEFT,   TOP,    FRONT)
-        frontbottomleft  = offset_coord_to_rank(comm_cart, dims, periodicity, LEFT,   BOTTOM, FRONT)
+        fronttop         = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, CENTER, TOP,    FRONT)
+        frontbottom      = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, CENTER, BOTTOM, FRONT)
+        frontleft        = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, LEFT,  CENTER, FRONT)
+        frontright       = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, RIGHT, CENTER, FRONT)
+        fronttopright    = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, RIGHT,  TOP,    FRONT)
+        frontbottomright = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, RIGHT,  BOTTOM, FRONT)
+        fronttopleft     = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, LEFT,   TOP,    FRONT)
+        frontbottomleft  = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, LEFT,   BOTTOM, FRONT)
 
-        backtop         = offset_coord_to_rank(comm_cart, dims, periodicity, CENTER, TOP,    BACK)
-        backbottom      = offset_coord_to_rank(comm_cart, dims, periodicity, CENTER, BOTTOM, BACK)
-        backtopright    = offset_coord_to_rank(comm_cart, dims, periodicity, RIGHT,  TOP,    BACK)
-        backbottomright = offset_coord_to_rank(comm_cart, dims, periodicity, RIGHT,  BOTTOM, BACK)
-        backtopleft     = offset_coord_to_rank(comm_cart, dims, periodicity, LEFT,   TOP,    BACK)
-        backbottomleft  = offset_coord_to_rank(comm_cart, dims, periodicity, LEFT,   BOTTOM, BACK)
+        backtop         = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, CENTER, TOP,    BACK)
+        backbottom      = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, CENTER, BOTTOM, BACK)
+        backleft        = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, LEFT, CENTER, BACK)
+        backright       = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity,  RIGHT, CENTER, BACK)
+        backtopright    = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, RIGHT,  TOP,    BACK)
+        backbottomright = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, RIGHT,  BOTTOM, BACK)
+        backtopleft     = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, LEFT,   TOP,    BACK)
+        backbottomleft  = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, LEFT,   BOTTOM, BACK)
 
         # Center
         neighbors[:,  1, 0] = [topleft   , top   , topright]
@@ -213,10 +221,10 @@ jlo_neighbor(p::CartesianTopology) = p.neighbors[ 0,-1, 0]
 jhi_neighbor(p::CartesianTopology) = p.neighbors[ 0, 1, 0]
 
 """Neighbor rank in the k-1 direction"""
-klo_neighbor(p::CartesianTopology) = p.neighbors[ 0, 0,-1]
+klo_neighbor(p::CartesianTopology) = p.neighbors[ 0, 0, 1]
 
 """Neighbor rank in the k+1 direction"""
-khi_neighbor(p::CartesianTopology) = p.neighbors[ 0, 0, 1]
+khi_neighbor(p::CartesianTopology) = p.neighbors[ 0, 0,-1]
 
 """
     neighbor(p::CartesianTopology, i_offset::Int, j_offset::Int, k_offset::Int)
