@@ -26,7 +26,7 @@ mutable struct MPIHaloArray{T,N} <: AbstractArray{T,N}
     data::Array{T,N}
     nhalo::Int
     rank::Int
-    # partitioning::ContinuousPartitioning{N}
+    topology::CartesianTopology
     # comm::MPI.Comm
     # window::MPI.Win
     # neighbor_ranks::Vector{Int}
@@ -34,7 +34,12 @@ mutable struct MPIHaloArray{T,N} <: AbstractArray{T,N}
     # MPIHaloArray{T}(sizes::Vararg{<:Integer,N}, nhalo) where {T,N} = MPIHaloArray(Array{T, 2}(undef, sizes...), nhalo, 0...)
 end
 
-MPIHaloArray(A::Array{T,N}, nhalo::Int) where {T,N} = MPIHaloArray(A, nhalo, 0)
+function MPIHaloArray(A::Array{T,N}, topo::CartesianTopology, nhalo::Int) where {T,N}
+    if topo.rank == 0
+        @show topo
+    end
+    MPIHaloArray(A, nhalo, topo.rank, topo)
+end
 
 # Required interface overloads to be an AbstractArray
 Base.size(A::MPIHaloArray) = size(A.data)
@@ -43,7 +48,7 @@ Base.getindex(A::MPIHaloArray{T,N}, I::Vararg{Int, N}) where {T,N} = getindex(A.
 Base.setindex!(A::MPIHaloArray{T,N}, v, i::Int) where {T,N} = setindex!(A.data, v, i)
 Base.setindex!(A::MPIHaloArray{T,N}, v, I::Vararg{Int, N}) where {T,N} = setindex!(A.data, v..., I...)
 
-A = MPIHaloArray(rand(10,20), 2)
+
 
 # include("utils/indexing.jl")
 

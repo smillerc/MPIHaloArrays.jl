@@ -30,16 +30,23 @@ function test_2x2x4_topology()
     #   |---------|---------|  ..  |---------|---------|  .. |---------|---------|  .. |---------|---------| 
     #      "back most", k=0                                                           "front most" slab, k=3
 
-    if P.rank == 0 # test a corner
-        @show P
+    # test a corner located at mpi coords (0,0,0), 
+    # but at (imin, jmax, kmax) in array coords
+    if P.rank == 0 
         @test ilo_neighbor(P) == 1
         @test ihi_neighbor(P) == 1
         @test jlo_neighbor(P) == 2
         @test jhi_neighbor(P) == 2
-        @test klo_neighbor(P) == 12
-        @test khi_neighbor(P) == 4
+        @test klo_neighbor(P) == 4
+        @test khi_neighbor(P) == 12
 
-        @test neighbor(P,1,-1,-1) == 7
+        @test neighbor(P, 1, 1,0) == 3
+        @test neighbor(P, 1,-1,0) == 3
+        @test neighbor(P,-1,-1,0) == 3
+        @test neighbor(P,-1, 1,0) == 3
+
+        @test neighbor(P,0,0,1) == 12
+        @test neighbor(P,1,0,1) == 13
         # @test neighbor(P,1,-1,0) == 5  
         # @test neighbor(P,-1,1,0) == 15  
         # @test neighbor(P,-1,-1,0) == 7  

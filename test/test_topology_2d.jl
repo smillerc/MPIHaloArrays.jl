@@ -73,7 +73,7 @@ function test_4x4_topology()
     end
 end
 
-# test_4x4_topology()
+test_4x4_topology()
 
 GC.gc()
 MPI.Finalize()

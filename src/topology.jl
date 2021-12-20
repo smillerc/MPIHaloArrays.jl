@@ -126,8 +126,8 @@ function CartesianTopology(dims::Vector{Int}, periodicity::Vector{Bool}; canreor
 
         fronttop         = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, CENTER, TOP,    FRONT)
         frontbottom      = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, CENTER, BOTTOM, FRONT)
-        frontleft        = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, LEFT,  CENTER, FRONT)
-        frontright       = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, RIGHT, CENTER, FRONT)
+        frontleft        = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, LEFT,  CENTER,  FRONT)
+        frontright       = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, RIGHT, CENTER,  FRONT)
         fronttopright    = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, RIGHT,  TOP,    FRONT)
         frontbottomright = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, RIGHT,  BOTTOM, FRONT)
         fronttopleft     = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, LEFT,   TOP,    FRONT)
@@ -135,8 +135,8 @@ function CartesianTopology(dims::Vector{Int}, periodicity::Vector{Bool}; canreor
 
         backtop         = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, CENTER, TOP,    BACK)
         backbottom      = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, CENTER, BOTTOM, BACK)
-        backleft        = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, LEFT, CENTER, BACK)
-        backright       = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity,  RIGHT, CENTER, BACK)
+        backleft        = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, LEFT,   CENTER, BACK)
+        backright       = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, RIGHT,  CENTER, BACK)
         backtopright    = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, RIGHT,  TOP,    BACK)
         backbottomright = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, RIGHT,  BOTTOM, BACK)
         backtopleft     = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, LEFT,   TOP,    BACK)
@@ -147,15 +147,13 @@ function CartesianTopology(dims::Vector{Int}, periodicity::Vector{Bool}; canreor
         neighbors[:,  0, 0] = [left      , rank  , right]
         neighbors[:, -1, 0] = [bottomleft, bottom, bottomright]
 
-        # Front
-        neighbors[:,  1, 1] = [backtopleft   , backtop   , backtopright]
-        neighbors[:,  0, 1] = [backleft      , back      , backright]
-        neighbors[:, -1, 1] = [backbottomleft, backbottom, backbottomright]
+        neighbors[:,  1, -1] = [backtopleft   , backtop   , backtopright]
+        neighbors[:,  0, -1] = [backleft      , back      , backright]
+        neighbors[:, -1, -1] = [backbottomleft, backbottom, backbottomright]
 
-        # Back
-        neighbors[:,  1, -1] = [fronttopleft   , fronttop   , fronttopright]
-        neighbors[:,  0, -1] = [frontleft      , front      , frontright]
-        neighbors[:, -1, -1] = [frontbottomleft, frontbottom, frontbottomright]
+        neighbors[:,  1, 1] = [fronttopleft   , fronttop   , fronttopright]
+        neighbors[:,  0, 1] = [frontleft      , front      , frontright]
+        neighbors[:, -1, 1] = [frontbottomleft, frontbottom, frontbottomright]
 
     end
 
@@ -221,10 +219,10 @@ jlo_neighbor(p::CartesianTopology) = p.neighbors[ 0,-1, 0]
 jhi_neighbor(p::CartesianTopology) = p.neighbors[ 0, 1, 0]
 
 """Neighbor rank in the k-1 direction"""
-klo_neighbor(p::CartesianTopology) = p.neighbors[ 0, 0, 1]
+klo_neighbor(p::CartesianTopology) = p.neighbors[ 0, 0,-1]
 
 """Neighbor rank in the k+1 direction"""
-khi_neighbor(p::CartesianTopology) = p.neighbors[ 0, 0,-1]
+khi_neighbor(p::CartesianTopology) = p.neighbors[ 0, 0, 1]
 
 """
     neighbor(p::CartesianTopology, i_offset::Int, j_offset::Int, k_offset::Int)
