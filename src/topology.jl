@@ -9,6 +9,17 @@ export ilo_neighbor, ihi_neighbor, jlo_neighbor, jhi_neighbor, klo_neighbor, khi
 """An abstract ParallelTopology type that is extended by either a CartesianTopology or GraphTopology (future)"""
 abstract type ParallelTopology end
 
+global const I = 0
+global const J = 0
+global const K = 0
+global const ILO = -1
+global const IHI = +1
+global const JLO = -1
+global const JHI = +1
+global const KLO = -1
+global const KHI = +1
+
+
 """
 CartesianTopology
 
@@ -21,7 +32,7 @@ The CartesianTopology type holds neighbor information, current rank, etc.
  - `coords`: Coordinates in the global space, i.e. `(0,1,1)`
  - `global_dims`: Dimensions of the global domain, i.e. `(4,4)` is a 4x4 global domain
  - `isperiodic`: Vector{Bool}; Perodicity of each dimension, i.e. `(false, true, true)` means y and z are periodic
- - `neighbors`: OffsetArray{Int}; Neighbor ranks (including corners), indexed as `[[left, center, right], i, j, k]`
+ - `neighbors`: OffsetArray{Int}; Neighbor ranks (including corners), indexed as `[[ilo, center, ihi], i, j, k]`
 """
 struct CartesianTopology <: ParallelTopology
     comm::MPI.Comm
@@ -30,7 +41,7 @@ struct CartesianTopology <: ParallelTopology
     coords::Vector{Int}      # [i, j, k]; coordinates in the
     global_dims::Vector{Int} # [i, j, k]; number of domains in each direction
     isperiodic::Vector{Bool} # [i, j, k]; is this dimension periodic?
-    neighbors::OffsetArray{Int, 3}   # [[left, center, right], i, j, k]; defaults to -1 if no neighbor
+    neighbors::OffsetArray{Int, 3}   # [[ilo, center, ihi], i, j, k]; defaults to -1 if no neighbor
 end
 
 #    Neighbor index convention (using offset arrays for index simplicity)
@@ -42,24 +53,26 @@ end
 #   |
 #   | (j)
 #
-#            +-------+-------+-------+
-#          /       /       /       / |
-#        +-------+-------+-------+   |
-#      /       /       /       / |   |
-#    /       /       /       /   |   |
-#   +-------+-------+-------+    |   +
-#   |       |       |       |    | / |
-#   | (1,1) | (0,1) | (1,1) |    +   |
-#   |       |       |       |  / |   |
-#   +-------+-------+-------+/   |   +
-#   |       |       |       |    | / |
-#   | (-1,0)| (0,0) | (1,2) |    +   |
-#   |       |       |       |  / |   |
-#   +-------+-------+-------+/   |   +
-#   |       |       |       |    | /
-#   |(-1,-1)| (0,-1)| (2,2) |    +
-#   |       |       |       |  /
-#   +-------+-------+-------+/
+#
+#              +-------+-------+-------+
+#            /       /       /       /  |
+#          /       /       /       /    |
+#        +-------+-------+-------+      |
+#      /       /       /       /  |     +
+#    /       /       /       /    |   / | 
+#   +-------+-------+-------+     | /   |
+#   |       |       |       |     +     |
+#   | (1,1) | (0,1) | (1,1) |   / |     +
+#   |       |       |       | /   |   / | 
+#   +-------+-------+-------+     | /   |
+#   |       |       |       |     +     |
+#   | (-1,0)| (0,0) | (1,2) |   / |     +
+#   |       |       |       | /   |   / 
+#   +-------+-------+-------+     | /   
+#   |       |       |       |     + 
+#   |(-1,-1)| (0,-1)| (2,2) |   /
+#   |       |       |       | /
+#   +-------+-------+-------+
 
 
 
@@ -93,72 +106,65 @@ function CartesianTopology(dims::Vector{Int}, periodicity::Vector{Bool}; canreor
     coords = MPI.Cart_coords(comm_cart)
     neighbors = OffsetArray(-ones(Int8,3,3,3), -1:1, -1:1, -1:1)
 
-    # Using these constants makes it less bug-prone when referencing neighbor indices
-    # due to the way MPI does their indexing
-    CENTER = 0
-    LEFT = -1
-    RIGHT = +1
-    BOTTOM = +1
-    TOP = -1
-    FRONT = +1
-    BACK = -1
-
     # MPI convention is (k, j, i), or (z, y, x) which is annoying
     if length(dims) == 1
-        left, right = MPI.Cart_shift(comm_cart, 0, 1)
+        ilo, ihi = MPI.Cart_shift(comm_cart, 0, 1)
+        
+        neighbors[:,  0, 0] = [ilo, rank, ihi]
+
     elseif length(dims) == 2
-        top, bottom = MPI.Cart_shift(comm_cart, 0, 1)
-        left, right = MPI.Cart_shift(comm_cart, 1, 1)
+        jlo, jhi = MPI.Cart_shift(comm_cart, 0, 1)
+        ilo, ihi = MPI.Cart_shift(comm_cart, 1, 1)
 
-        topright    = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, RIGHT, TOP)
-        bottomright = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, RIGHT, BOTTOM)
-        topleft     = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, LEFT, TOP)
-        bottomleft  = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, LEFT, BOTTOM)
+        jhi_ihi = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, IHI, JHI)
+        jlo_ihi = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, IHI, JLO)
+        jhi_ilo = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, ILO, JHI)
+        jlo_ilo = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, ILO, JLO)
 
-        neighbors[:,  1, 0] = [topleft   , top   , topright]
-        neighbors[:,  0, 0] = [left      , rank  , right]
-        neighbors[:, -1, 0] = [bottomleft, bottom, bottomright]
+        neighbors[:,  1, 0] = [jhi_ilo, jhi , jhi_ihi]
+        neighbors[:,  0, 0] = [ilo    , rank, ihi]
+        neighbors[:, -1, 0] = [jlo_ilo, jlo , jlo_ihi]
 
     elseif length(dims) == 3
-        front, back = MPI.Cart_shift(comm_cart, 0, 1)
-        top, bottom = MPI.Cart_shift(comm_cart, 1, 1)
-        left, right = MPI.Cart_shift(comm_cart, 2, 1)
+        ilo, ihi = MPI.Cart_shift(comm_cart, 2, 1)
+        jlo, jhi = MPI.Cart_shift(comm_cart, 1, 1)
+        klo, khi = MPI.Cart_shift(comm_cart, 0, 1)
 
-        topright    = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, RIGHT, TOP,    CENTER)
-        topleft     = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, LEFT , TOP,    CENTER)
-        bottomright = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, RIGHT, BOTTOM, CENTER)
-        bottomleft  = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, LEFT , BOTTOM, CENTER)
+        jhi_ihi = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, IHI, JHI, K)
+        jhi_ilo = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, ILO, JHI, K)
+        jlo_ihi = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, IHI, JLO, K)
+        jlo_ilo = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, ILO, JLO, K)
 
-        fronttop         = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, CENTER, TOP,    FRONT)
-        frontbottom      = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, CENTER, BOTTOM, FRONT)
-        frontleft        = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, LEFT,  CENTER,  FRONT)
-        frontright       = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, RIGHT, CENTER,  FRONT)
-        fronttopright    = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, RIGHT,  TOP,    FRONT)
-        frontbottomright = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, RIGHT,  BOTTOM, FRONT)
-        fronttopleft     = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, LEFT,   TOP,    FRONT)
-        frontbottomleft  = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, LEFT,   BOTTOM, FRONT)
+        klo_jhi     = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, I  , JHI, KLO)
+        klo_jlo     = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, I  , JLO, KLO)
+        klo_ilo     = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, ILO, J  , KLO)
+        klo_ihi     = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, IHI, J  , KLO)
+        klo_jhi_ihi = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, IHI, JHI, KLO)
+        klo_jlo_ihi = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, IHI, JLO, KLO)
+        klo_jhi_ilo = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, ILO, JHI, KLO)
+        klo_jlo_ilo = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, ILO, JLO, KLO)
 
-        backtop         = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, CENTER, TOP,    BACK)
-        backbottom      = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, CENTER, BOTTOM, BACK)
-        backleft        = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, LEFT,   CENTER, BACK)
-        backright       = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, RIGHT,  CENTER, BACK)
-        backtopright    = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, RIGHT,  TOP,    BACK)
-        backbottomright = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, RIGHT,  BOTTOM, BACK)
-        backtopleft     = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, LEFT,   TOP,    BACK)
-        backbottomleft  = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, LEFT,   BOTTOM, BACK)
+        khi_jhi     = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, I  , JHI, KHI)
+        khi_jlo     = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, I  , JLO, KHI)
+        khi_ilo     = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, ILO, J  , KHI)
+        khi_ihi     = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, IHI, J  , KHI)
+        khi_jhi_ihi = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, IHI, JHI, KHI)
+        khi_jlo_ihi = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, IHI, JLO, KHI)
+        khi_jhi_ilo = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, ILO, JHI, KHI)
+        khi_jlo_ilo = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, ILO, JLO, KHI)
 
         # Center
-        neighbors[:,  1, 0] = [topleft   , top   , topright]
-        neighbors[:,  0, 0] = [left      , rank  , right]
-        neighbors[:, -1, 0] = [bottomleft, bottom, bottomright]
+        neighbors[:,  1, K] = [jhi_ilo, jhi , jhi_ihi]
+        neighbors[:,  0, K] = [ilo    , rank, ihi]
+        neighbors[:, -1, K] = [jlo_ilo, jlo , jlo_ihi]
 
-        neighbors[:,  1, -1] = [backtopleft   , backtop   , backtopright]
-        neighbors[:,  0, -1] = [backleft      , back      , backright]
-        neighbors[:, -1, -1] = [backbottomleft, backbottom, backbottomright]
+        neighbors[:,  1, KHI] = [khi_jhi_ilo, khi_jhi, khi_jhi_ihi]
+        neighbors[:,  0, KHI] = [khi_ilo    , khi    , khi_ihi]
+        neighbors[:, -1, KHI] = [khi_jlo_ilo, khi_jlo, khi_jlo_ihi]
 
-        neighbors[:,  1, 1] = [fronttopleft   , fronttop   , fronttopright]
-        neighbors[:,  0, 1] = [frontleft      , front      , frontright]
-        neighbors[:, -1, 1] = [frontbottomleft, frontbottom, frontbottomright]
+        neighbors[:,  1, KLO] = [klo_jhi_ilo, klo_jhi, klo_jhi_ihi]
+        neighbors[:,  0, KLO] = [klo_ilo    , klo    , klo_ihi]
+        neighbors[:, -1, KLO] = [klo_jlo_ilo, klo_jlo, klo_jlo_ihi]
 
     end
 
@@ -249,13 +255,21 @@ P = CartesianTopology([4,4], [true, true])
 # Find the ihi neighbor
 ihi = neighbor(P,+1,0,0)
 
-# Find the upper right corner neighbor (ihi and jhi side)
+# Find the upper ihi corner neighbor (ihi and jhi side)
 ihijhi_corner = neighbor(P,+1,+1,0)
 ```
 
 """
 function neighbor(p::CartesianTopology, i_offset::Int, j_offset::Int, k_offset::Int)
     p.neighbors[i_offset, j_offset, k_offset]
+end
+
+function neighbor(p::CartesianTopology, i_offset::Int, j_offset::Int)
+    p.neighbors[i_offset, j_offset, 0]
+end
+
+function neighbor(p::CartesianTopology, i_offset::Int)
+    p.neighbors[i_offset, 0, 0]
 end
 
 function neighbors(p::CartesianTopology)

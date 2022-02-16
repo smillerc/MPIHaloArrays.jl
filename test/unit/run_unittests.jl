@@ -10,7 +10,8 @@ if length(testfiles) < 1 error("No tests files found!") end
 
 testfiles = [
     # "test_mpihaloarray.jl", 
-    # "test_topology_2d.jl", 
+    "test_topology_1d.jl", 
+    "test_topology_2d.jl", 
     "test_topology_3d.jl"
     ]
 
