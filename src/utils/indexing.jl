@@ -10,7 +10,6 @@ Helper functions to get the low side halo and domain starting/ending indices
 @inline function lo_indices(field, dim, nhalo)
     CI = CartesianIndices(field)
     lo_indices = first(CI) |> Tuple
-    hi_indices = last(CI) |> Tuple
     
     lo_halo_start = lo_indices[dim] # start index of the halo region
     lo_halo_end = lo_halo_start + nhalo - 1
