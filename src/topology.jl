@@ -1,5 +1,10 @@
+module ParallelTopologies
+
 using MPI
 using OffsetArrays
+
+export ParallelTopology, CartesianTopology
+export ilo_neighbor, ihi_neighbor, jlo_neighbor, jhi_neighbor, klo_neighbor, khi_neighbor, neighbor, neighbors
 
 """An abstract ParallelTopology type that is extended by either a CartesianTopology or GraphTopology (future)"""
 abstract type ParallelTopology end
@@ -251,4 +256,10 @@ ihijhi_corner = neighbor(P,+1,+1,0)
 """
 function neighbor(p::CartesianTopology, i_offset::Int, j_offset::Int, k_offset::Int)
     p.neighbors[i_offset, j_offset, k_offset]
+end
+
+function neighbors(p::CartesianTopology)
+    p.neighbors
+end
+
 end
