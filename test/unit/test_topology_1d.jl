@@ -14,6 +14,20 @@ const i = 0
 
 @assert nprocs == 16 "Topology neighbor tests are designed with 16 processes only"
 
+function test_1D_topology_creation()
+    P = CartesianTopology(nprocs, true)
+    @test P.global_dims == [16]
+    for proc in 0:nprocs-1
+        if rank == proc
+            @test P.rank == proc
+        end
+    end
+
+    # Invalid dims test
+    @test_throws AssertionError CartesianTopology(nprocs-1, true)
+
+end
+
 function test_16x1_topology_all_periodic()
     P = CartesianTopology([16], [true])
 
@@ -42,6 +56,7 @@ function test_16x1_topology_no_periodic()
     end
 end
 
+test_1D_topology_creation()
 test_16x1_topology_all_periodic()
 test_16x1_topology_no_periodic()
 

@@ -1,8 +1,6 @@
 using MPI, Test
 using InteractiveUtils
-
 using MPIHaloArrays
-# include("../src/MPIHaloArrays.jl")
 
 MPI.Init()
 const comm = MPI.COMM_WORLD

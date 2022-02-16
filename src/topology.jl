@@ -1,10 +1,10 @@
-module ParallelTopologies
+# module ParallelTopologies
 
-using MPI
-using OffsetArrays
+# using MPI
+# using OffsetArrays
 
-export ParallelTopology, CartesianTopology
-export ilo_neighbor, ihi_neighbor, jlo_neighbor, jhi_neighbor, klo_neighbor, khi_neighbor, neighbor, neighbors
+# export ParallelTopology, CartesianTopology
+# export ilo_neighbor, ihi_neighbor, jlo_neighbor, jhi_neighbor, klo_neighbor, khi_neighbor, neighbor, neighbors
 
 """An abstract ParallelTopology type that is extended by either a CartesianTopology or GraphTopology (future)"""
 abstract type ParallelTopology end
@@ -179,22 +179,22 @@ end
 
 """Helper function to find rank based on 3D offsets"""
 function offset_coord_to_rank(comm, dims, periods, i_offset::Int, j_offset::Int, k_offset::Int)
-    coords = MPI.Cart_coords(comm) .+ (i_offset, j_offset, k_offset)
-    # coords = MPI.Cart_coords(comm) .+ (k_offset, j_offset, i_offset)
+    # coords = MPI.Cart_coords(comm) .+ (i_offset, j_offset, k_offset)
+    coords = MPI.Cart_coords(comm) .+ (k_offset, j_offset, i_offset)
     coord_to_rank(comm, dims, periods, coords)
 end
 
 """Helper function to find rank based on 2D offsets"""
 function offset_coord_to_rank(comm, dims, periods, i_offset::Int, j_offset::Int)
-    # coords = MPI.Cart_coords(comm) .+ (j_offset, i_offset)
-    coords = MPI.Cart_coords(comm) .+ (i_offset, j_offset)
+    coords = MPI.Cart_coords(comm) .+ (j_offset, i_offset)
+    # coords = MPI.Cart_coords(comm) .+ (i_offset, j_offset)
     coord_to_rank(comm, dims, periods, coords)
 end
 
 """Helper function to find rank based on coordinates"""
 function coord_to_rank(comm, dims, periods, coords)
 
-    mpi_coords = coords |> reverse # mpi uses reverse coordinate convention
+    mpi_coords = coords #|> reverse # mpi uses reverse coordinate convention
     isvalid = true
 
     for i in 1:length(dims)
@@ -285,4 +285,4 @@ function neighbors(p::CartesianTopology)
     p.neighbors
 end
 
-end
+# end
