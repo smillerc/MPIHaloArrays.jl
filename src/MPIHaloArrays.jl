@@ -1,14 +1,14 @@
+module MPIHaloArrays
+
 using MPI
 using OffsetArrays
 
-export ParallelTopology, CartesianTopology
-export neighbor, ilo_neighbor, ihi_neighbor, jlo_neighbor, jhi_neighbor, klo_neighbor, khi_neighbor
-
 include("topology.jl")
-# const NNEIGHBORS_PER_DIM = 2     # Number of neighbors per dimension (left neighbor + right neighbor).
-# const NDIMS_MPI = 3              # Internally, we set the number of dimensions always to 3 for calls to MPI. This ensures a fixed size for MPI coords, neigbors, etc and in general a simple, easy to read code.
+using .ParallelTopologies
 
-# include("partitioning.jl")
+export MPIHaloArray
+export ParallelTopology, CartesianTopology
+export neighbor, neighbors, ilo_neighbor, ihi_neighbor, jlo_neighbor, jhi_neighbor, klo_neighbor, khi_neighbor
 
 """
 MPIHaloArray
@@ -139,3 +139,4 @@ Base.setindex!(A::MPIHaloArray{T,N}, v, I::Vararg{Int, N}) where {T,N} = setinde
 # # print_arr(U)
 
 # # MPI.Finalize()
+end
