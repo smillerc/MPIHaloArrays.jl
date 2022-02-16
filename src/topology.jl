@@ -103,7 +103,8 @@ function CartesianTopology(dims::Vector{Int}, periodicity::Vector{Bool}; canreor
     @assert prod(dims) == nprocs "Too many dimensions for the given number of processes"
 
     comm_cart = MPI.Cart_create(comm, mpi_dims, mpi_periodicity .|> Int, canreorder)
-    coords = MPI.Cart_coords(comm_cart)
+    # coords = MPI.Cart_coords(comm_cart)
+    coords = MPI.Cart_coords(comm_cart) |> reverse
     neighbors = OffsetArray(-ones(Int8,3,3,3), -1:1, -1:1, -1:1)
 
     # MPI convention is (k, j, i), or (z, y, x) which is annoying
@@ -171,32 +172,40 @@ function CartesianTopology(dims::Vector{Int}, periodicity::Vector{Bool}; canreor
     CartesianTopology(comm_cart, nprocs, rank, coords, dims, periodicity, neighbors)
 end
 
+function CartesianTopology(dims::Int, periodicity::Bool; canreorder = false)
+    CartesianTopology([dims], [periodicity]; canreorder = canreorder)
+end
+
+
 """Helper function to find rank based on 3D offsets"""
 function offset_coord_to_rank(comm, dims, periods, i_offset::Int, j_offset::Int, k_offset::Int)
-    coords = MPI.Cart_coords(comm) .+ (k_offset, j_offset, i_offset)
+    coords = MPI.Cart_coords(comm) .+ (i_offset, j_offset, k_offset)
+    # coords = MPI.Cart_coords(comm) .+ (k_offset, j_offset, i_offset)
     coord_to_rank(comm, dims, periods, coords)
 end
 
 """Helper function to find rank based on 2D offsets"""
 function offset_coord_to_rank(comm, dims, periods, i_offset::Int, j_offset::Int)
-    coords = MPI.Cart_coords(comm) .+ (j_offset, i_offset)
+    # coords = MPI.Cart_coords(comm) .+ (j_offset, i_offset)
+    coords = MPI.Cart_coords(comm) .+ (i_offset, j_offset)
     coord_to_rank(comm, dims, periods, coords)
 end
 
 """Helper function to find rank based on coordinates"""
 function coord_to_rank(comm, dims, periods, coords)
 
+    mpi_coords = coords |> reverse # mpi uses reverse coordinate convention
     isvalid = true
 
     for i in 1:length(dims)
-        if (!periods[i] && (coords[i] >= dims[i] || coords[i] < 0))
+        if (!periods[i] && (mpi_coords[i] >= dims[i] || mpi_coords[i] < 0))
             isvalid = false
             break
         end
     end
 
     if isvalid
-        rank = MPI.Cart_rank(comm, coords)
+        rank = MPI.Cart_rank(comm, mpi_coords)
     else
         rank = -1
     end
