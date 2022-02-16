@@ -1,6 +1,6 @@
 using MPI
-
-include("../src/MPIHaloArrays.jl")
+using MPIHaloArrays
+# include("../src/MPIHaloArrays.jl")
 
 MPI.Init()
 

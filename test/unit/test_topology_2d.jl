@@ -1,7 +1,8 @@
 using MPI, Test
 using InteractiveUtils
 
-include("../src/topology.jl")
+using MPIHaloArrays
+# include("../src/MPIHaloArrays.jl")
 
 MPI.Init()
 const comm = MPI.COMM_WORLD
