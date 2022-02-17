@@ -9,7 +9,9 @@ testfiles = sort(filter(istest, readdir(testdir)))
 if length(testfiles) < 1 error("No tests files found!") end
 
 testfiles = [
-    ("test_edge_sync.jl", 4),
+    ("test_edge_sync_1d.jl", 8),
+    ("test_edge_sync_2d.jl", 8),
+    # ("test_edge_sync_3d.jl", 8),
     # ("test_indexing.jl", 16),
     # ("test_topology_1d.jl", 16),
     # ("test_topology_2d.jl", 16),
