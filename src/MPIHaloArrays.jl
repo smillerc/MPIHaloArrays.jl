@@ -41,17 +41,22 @@ mutable struct MPIHaloArray{T,N} <: AbstractArray{T,N}
     topology::CartesianTopology
     local_indices::Vector{DataIndices}
     global_indices::Vector{DataIndices}
+    do_corners::Bool
     # MPIHaloArray{T}(sizes::Vararg{<:Integer,N}, nhalo) where {T,N} = MPIHaloArray(Array{T, 2}(undef, sizes...), nhalo, 0...)
 end
 
 include("utils/indexing.jl")
 include("sync_edges.jl")
 
-function MPIHaloArray(A::AbstractArray{T,N}, topo::CartesianTopology, nhalo::Int) where {T,N}
+function MPIHaloArray(A::AbstractArray{T,N}, topo::CartesianTopology, nhalo::Int; do_corners=true, com_model=:p2p) where {T,N}
     local_di = Vector{DataIndices}(undef, N)
     global_di = Vector{DataIndices}(undef, N)
 
     A_with_halo = pad_with_halo(A, nhalo)
+
+    if length(topo.global_dims) > length(size(A))
+        @error "Dimensionality of the ParallelTopology ($(length(topo.global_dims))) > the dimensionality of the array A ($(length(size(A))))"
+    end
 
     for dim in 1:N
         lo_halo_start, lo_halo_end, lo_dom_start, lo_dom_end = lo_indices(A_with_halo, dim, nhalo)
@@ -73,7 +78,7 @@ function MPIHaloArray(A::AbstractArray{T,N}, topo::CartesianTopology, nhalo::Int
     end
 
     update_halo_data!(A, A_with_halo, local_di)
-    MPIHaloArray(A_with_halo, nhalo, topo.rank, topo, local_di, global_di)
+    MPIHaloArray(A_with_halo, nhalo, topo.rank, topo, local_di, global_di, do_corners)
 end
 
 function update_halo_data!(A_no_halo::AbstractArray{T,1}, A_with_halo::AbstractArray{T,1}, local_data_indices) where {T}
@@ -159,6 +164,29 @@ function fillhalo!(A::MPIHaloArray{T,2}, fillval) where {T}
     fill!(jhiA, fillval)
 end
 
+function fillhalo!(A::MPIHaloArray{T,3}, fillval) where {T}
+    ilo_halo_start, ilo_halo_end = A.local_indices[1].lo_halo
+    ihi_halo_start, ihi_halo_end = A.local_indices[1].hi_halo
+    jlo_halo_start, jlo_halo_end = A.local_indices[2].lo_halo
+    jhi_halo_start, jhi_halo_end = A.local_indices[2].hi_halo
+    klo_halo_start, klo_halo_end = A.local_indices[3].lo_halo
+    khi_halo_start, khi_halo_end = A.local_indices[3].hi_halo
+
+    iloA = @view A.data[ilo_halo_start:ilo_halo_end, :, :]
+    ihiA = @view A.data[ihi_halo_start:ihi_halo_end, :, :]
+    jloA = @view A.data[:, jlo_halo_start:jlo_halo_end, :]
+    jhiA = @view A.data[:, jhi_halo_start:jhi_halo_end, :]
+    kloA = @view A.data[:, :, klo_halo_start:klo_halo_end]
+    khiA = @view A.data[:, :, khi_halo_start:khi_halo_end]
+
+    fill!(iloA, fillval)
+    fill!(ihiA, fillval)
+    fill!(jloA, fillval)
+    fill!(jhiA, fillval)
+    fill!(kloA, fillval)
+    fill!(khiA, fillval)
+end
+
 function filldomain!(A::MPIHaloArray{T,1}, fillval) where {T}
     ilo, ihi  = A.local_indices[1].domain
     domA = @view A.data[ilo:ihi]
@@ -166,10 +194,17 @@ function filldomain!(A::MPIHaloArray{T,1}, fillval) where {T}
 end
 
 function filldomain!(A::MPIHaloArray{T,2}, fillval) where {T}
-
     ilo, ihi  = A.local_indices[1].domain
     jlo, jhi  = A.local_indices[2].domain
     domA = @view A.data[ilo:ihi, jlo:jhi]
+    fill!(domA, fillval)
+end
+
+function filldomain!(A::MPIHaloArray{T,3}, fillval) where {T}
+    ilo, ihi  = A.local_indices[1].domain
+    jlo, jhi  = A.local_indices[2].domain
+    klo, khi  = A.local_indices[3].domain
+    domA = @view A.data[ilo:ihi, jlo:jhi, klo:khi]
     fill!(domA, fillval)
 end
 
