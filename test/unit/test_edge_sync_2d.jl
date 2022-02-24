@@ -10,16 +10,36 @@ const nprocs = MPI.Comm_size(comm)
 
 @assert nprocs == 8 "This MPIHaloArray edge_sync test is designed with 4 processes only"
 
+function print_array(U,proc)
+    if rank == proc
+        println()
+        println("proc: ", proc)
+        for j in size(U, 2):-1:1
+            println("j: ", j, "\t", U[:,j])
+        end
+        istr = join(collect(1:size(U, 1)), "    ")
+        println("\t  "*"-"^length(istr))
+        println("i :\t  ", istr)
+        println()
+    end
+    MPI.Barrier(comm)
+end
+
+function rank_data(ni, nj, rank)
+    data = collect(1:ni*nj) * (rank + 1) .+ 10
+    reshape(data, ni, nj)
+end
+
 function test_edge_sync_2darray_2halo_no_periodic()
     topology = CartesianTopology([4,2], [false, false])
+    # topology = CartesianTopology([4,2], [true, true])
 
     nhalo = 2
-    ni = 8
-    nj = 8
+    ni = 6
+    nj = 5
 
-    A = MPIHaloArray(zeros(Int, ni,nj), topology, nhalo)
-    # Fill each by the current rank
-    filldomain!(A, A.topology.rank)
+    data = rank_data(ni, nj, rank)
+    A = MPIHaloArray(data, topology, nhalo)
     fillhalo!(A, -1)
 
     ilo, ihi  = A.local_indices[1].domain
@@ -38,45 +58,12 @@ function test_edge_sync_2darray_2halo_no_periodic()
     sync_edges!(A)
 
     if rank == 0
+        ihi_neighbor_ilo_edge = rank_data(ni,nj,1)[1:nhalo,:]
+        jhi_neighbor_jlo_edge = rank_data(ni,nj,4)[:,1:nhalo]
+        @test all(A_ihi_halo .== ihi_neighbor_ilo_edge)
+        @test all(A_jhi_halo .== jhi_neighbor_jlo_edge)
         @test all(A_ilo_halo .== -1)
-        @test all(A_ihi_halo .== 1)
         @test all(A_jlo_halo .== -1)
-        @test all(A_jhi_halo .== 4)
-    elseif rank == 1
-        @test all(A_ilo_halo .== 0)
-        @test all(A_ihi_halo .== 2)
-        @test all(A_jlo_halo .== -1)
-        @test all(A_jhi_halo .== 5)
-    elseif rank == 2
-        @test all(A_ilo_halo .== 1)
-        @test all(A_ihi_halo .== 3)
-        @test all(A_jlo_halo .== -1)
-        @test all(A_jhi_halo .== 6)
-    elseif rank == 3
-        @test all(A_ilo_halo .== 2)
-        @test all(A_ihi_halo .== -1)
-        @test all(A_jlo_halo .== -1)
-        @test all(A_jhi_halo .== 7)
-    elseif rank == 4
-        @test all(A_ilo_halo .== -1)
-        @test all(A_ihi_halo .== 5)
-        @test all(A_jlo_halo .== 0)
-        @test all(A_jhi_halo .== -1)
-    elseif rank == 5
-        @test all(A_ilo_halo .== 4)
-        @test all(A_ihi_halo .== 6)
-        @test all(A_jlo_halo .== 1)
-        @test all(A_jhi_halo .== -1)
-    elseif rank == 6
-        @test all(A_ilo_halo .== 5)
-        @test all(A_ihi_halo .== 7)
-        @test all(A_jlo_halo .== 2)
-        @test all(A_jhi_halo .== -1)
-    elseif rank == 7
-        @test all(A_ilo_halo .== 6)
-        @test all(A_ihi_halo .== -1)
-        @test all(A_jlo_halo .== 3)
-        @test all(A_jhi_halo .== -1)
     end
 end
 
@@ -84,12 +71,11 @@ function test_edge_sync_2darray_2halo_all_periodic()
     topology = CartesianTopology([4,2], [true, true])
 
     nhalo = 2
-    ni = 8
-    nj = 8
+    ni = 6
+    nj = 5
 
-    A = MPIHaloArray(zeros(Int, ni,nj), topology, nhalo)
-    # Fill each by the current rank
-    filldomain!(A, A.topology.rank)
+    data = rank_data(ni, nj, rank)
+    A = MPIHaloArray(data, topology, nhalo)
     fillhalo!(A, -1)
 
     ilo, ihi  = A.local_indices[1].domain
@@ -106,47 +92,17 @@ function test_edge_sync_2darray_2halo_all_periodic()
     A_jhi_halo = @view A.data[ilo:ihi, jhi_halo_start:jhi_halo_end]
 
     sync_edges!(A)
-
+  
     if rank == 0
-        @test all(A_ilo_halo .== 3)
-        @test all(A_ihi_halo .== 1)
-        @test all(A_jlo_halo .== 4)
-        @test all(A_jhi_halo .== 4)
-    elseif rank == 1
-        @test all(A_ilo_halo .== 0)
-        @test all(A_ihi_halo .== 2)
-        @test all(A_jlo_halo .== 5)
-        @test all(A_jhi_halo .== 5)
-    elseif rank == 2
-        @test all(A_ilo_halo .== 1)
-        @test all(A_ihi_halo .== 3)
-        @test all(A_jlo_halo .== 6)
-        @test all(A_jhi_halo .== 6)
-    elseif rank == 3
-        @test all(A_ilo_halo .== 2)
-        @test all(A_ihi_halo .== 0)
-        @test all(A_jlo_halo .== 7)
-        @test all(A_jhi_halo .== 7)
-    elseif rank == 4
-        @test all(A_ilo_halo .== 7)
-        @test all(A_ihi_halo .== 5)
-        @test all(A_jlo_halo .== 0)
-        @test all(A_jhi_halo .== 0)
-    elseif rank == 5
-        @test all(A_ilo_halo .== 4)
-        @test all(A_ihi_halo .== 6)
-        @test all(A_jlo_halo .== 1)
-        @test all(A_jhi_halo .== 1)
-    elseif rank == 6
-        @test all(A_ilo_halo .== 5)
-        @test all(A_ihi_halo .== 7)
-        @test all(A_jlo_halo .== 2)
-        @test all(A_jhi_halo .== 2)
-    elseif rank == 7
-        @test all(A_ilo_halo .== 6)
-        @test all(A_ihi_halo .== 4)
-        @test all(A_jlo_halo .== 3)
-        @test all(A_jhi_halo .== 3)
+        ihi_neighbor_ilo_edge = rank_data(ni,nj,1)[1:nhalo,:]
+        jhi_neighbor_jlo_edge = rank_data(ni,nj,4)[:,1:nhalo]
+        ilo_neighbor_ihi_edge = rank_data(ni,nj,3)[end-nhalo+1:end,:]
+        jlo_neighbor_jhi_edge = rank_data(ni,nj,4)[:,end-nhalo+1:end]
+
+        @test all(A_ihi_halo .== ihi_neighbor_ilo_edge)
+        @test all(A_jhi_halo .== jhi_neighbor_jlo_edge)
+        @test all(A_jlo_halo .== jlo_neighbor_jhi_edge)
+        @test all(A_ilo_halo .== ilo_neighbor_ihi_edge)
     end
 end
 
