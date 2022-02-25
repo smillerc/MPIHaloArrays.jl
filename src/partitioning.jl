@@ -1,13 +1,12 @@
-using Base.Threads
-using LinearAlgebra
+using LinearAlgebra: norm
 
 """Return all common denominators of n"""
 function denominators(n::Integer)
     denominators = Vector{Int}(undef, 0)
     for i in 1:n
-      if mod(n, i) == 0
-        push!(denominators, i)
-      end
+        if mod(n, i) == 0
+            push!(denominators, i)
+        end
     end
     return denominators
 end
@@ -35,7 +34,7 @@ function num_2d_tiles(n)
     for i in 2:length(dim1)
         n1 = norm([dim1[i], dim2[i]] .- sqrt(n))
         n2 = norm(num_2d_tiles .- sqrt(n))
-        if n1 < n2 
+        if n1 < n2
             num_2d_tiles = [dim1[i], dim2[i]]
         end
     end
@@ -69,7 +68,7 @@ function num_3d_tiles(n)
     for i in 2:length(dim1)
         n1 = norm([dim1[i], dim2[i], dim3[i]] .- sqrt(n))
         n2 = norm(num_3d_tiles .- sqrt(n))
-        if n1 < n2 
+        if n1 < n2
             num_3d_tiles = [dim1[i], dim2[i], dim3[i]]
         end
     end
@@ -80,7 +79,7 @@ end
 Given an input I dimensions of the total computational domain,
 returns an array of start and end indices [ilo,ihi]
 """
-function tile_indices_1d(dims::Integer; ntiles=nthreads(), id=threadid())
+function tile_indices_1d(dims::Integer, ntiles::Integer, id::Integer)
     indices = zeros(Int, 2)
     tile_size = dims ÷ ntiles
 
@@ -101,12 +100,12 @@ end
 Given an input (I,J) dimensions of the total computational domain,
 returns an array of start and end indices [ilo,ihi,jlo,jhi]
 """
-function tile_indices_2d(dims; ntiles=nthreads(), id=threadid())
-    indices = zeros(Int,4)
+function tile_indices_2d(dims, ntiles::Integer, id::Integer)
+    indices = zeros(Int, 4)
     tiles = num_2d_tiles(ntiles)
-    tiles_ij = tile_id_to_ij(id; ntiles=ntiles)
-    indices[1:2] = tile_indices_1d(dims[1]; id=tiles_ij[1], ntiles=tiles[1])
-    indices[3:4] = tile_indices_1d(dims[2]; id=tiles_ij[2], ntiles=tiles[2])
+    tiles_ij = tile_id_to_ij(id, ntiles)
+    indices[1:2] = tile_indices_1d(dims[1], tiles[1], tiles_ij[1])
+    indices[3:4] = tile_indices_1d(dims[2], tiles[2], tiles_ij[2])
     return indices
 end
 
@@ -114,30 +113,34 @@ end
 Given an input (I,J,K) dimensions of the total computational domain,
 returns an array of start and end indices [ilo,ihi,jlo,jhi,klo,khi]
 """
-function tile_indices_3d(dims; ntiles=nthreads(), id=threadid())
-    indices = zeros(Int,6)
+function tile_indices_3d(dims, ntiles::Integer, id::Integer)
+    indices = zeros(Int, 6)
     tiles = num_3d_tiles(ntiles)
-    tiles_ij = tile_id_to_ijk(id; ntiles=ntiles)
-    indices[1:2] = tile_indices_1d(dims[1]; id=tiles_ij[1], ntiles=tiles[1])
-    indices[3:4] = tile_indices_1d(dims[2]; id=tiles_ij[2], ntiles=tiles[2])
-    indices[5:6] = tile_indices_1d(dims[3]; id=tiles_ij[3], ntiles=tiles[3])
+    tiles_ij = tile_id_to_ijk(id, ntiles)
+    indices[1:2] = tile_indices_1d(dims[1], tiles[1], tiles_ij[1])
+    indices[3:4] = tile_indices_1d(dims[2], tiles[2], tiles_ij[2])
+    indices[5:6] = tile_indices_1d(dims[3], tiles[3], tiles_ij[3])
     return indices
 end
 
 """Given tile id in a 1D layout, returns the corresponding tile indices in a 2D layout"""
-function tile_id_to_ij(id; ntiles=nthreads())
-    if id < 1 @error("Invalid tile id") end
+function tile_id_to_ij(id::Integer, ntiles::Integer)
+    if id < 1
+        @error("Invalid tile id")
+    end
     I, J = num_2d_tiles(ntiles)
-    CI=CartesianIndices((1:I, 1:J))
+    CI = CartesianIndices((1:I, 1:J))
     ij = Tuple(CI[id])
     return ij
 end
 
 """Given tile id in a 1D layout, returns the corresponding tile indices in a 3D layout"""
-function tile_id_to_ijk(id; ntiles=nthreads())
-    if id < 1 @error("Invalid tile id") end
+function tile_id_to_ijk(id::Integer, ntiles::Integer)
+    if id < 1
+        @error("Invalid tile id")
+    end
     I, J, K = num_3d_tiles(ntiles)
-    CI=CartesianIndices((1:I, 1:J, 1:K))
+    CI = CartesianIndices((1:I, 1:J, 1:K))
     ijk = Tuple(CI[id])
     return ijk
 end
