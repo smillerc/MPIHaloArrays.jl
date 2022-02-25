@@ -3,7 +3,8 @@ module MPIHaloArrays
 using MPI
 using OffsetArrays
 
-include("./topology.jl")
+include("topology.jl")
+include("partitioning.jl")
 
 # using .ParallelTopologies
 
@@ -13,6 +14,7 @@ export neighbor, neighbors
 export ilo_neighbor, ihi_neighbor, jlo_neighbor, jhi_neighbor, klo_neighbor, khi_neighbor
 export lo_indices, hi_indices, fillhalo!, filldomain!
 export sync_edges!
+export scatterglobal, gatherglobal
 
 struct DataIndices{T <: Integer}
     lo_halo::NTuple{2,T}               # (start,end) indices of the halo region on the low side
@@ -26,7 +28,7 @@ end
 MPIHaloArray
 
 # Fields
- - `data`: Array{T,N} - contains the local data on the current rank
+ - `data`: AbstractArray{T,N} - contains the local data on the current rank
  - `partitioning`: partitioning datatype
  - `comm`: MPI communicator
  - `window`: MPI window
@@ -47,7 +49,19 @@ end
 
 include("utils/indexing.jl")
 include("sync_edges.jl")
+include("scattergather.jl")
 
+"""MPIHaloArray constructor
+
+# Arguments
+ - `A`: AbstractArray{T,N}
+ - `topo`: Parallel topology type, e.g. CartesianTopology
+ - `nhalo`: Number of halo cells
+
+# Keyword Arguments
+ - `do_corners`: [true] Exchange corner halo regions 
+ - `com_model`: [p2p] Communication model, e.g. :p2p is point-to-point (Isend, Irecv), :rma is onesided (Get,Put), :shared is MPI's shared memory model
+"""
 function MPIHaloArray(A::AbstractArray{T,N}, topo::CartesianTopology, nhalo::Int; do_corners=true, com_model=:p2p) where {T,N}
     local_di = Vector{DataIndices}(undef, N)
     global_di = Vector{DataIndices}(undef, N)
