@@ -4,6 +4,7 @@ authors = ["Miller, Samuel <smil@lle.rochester.edu>"]
 version = "0.1.0"
 
 [deps]
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195"
 OffsetArrays = "6fe1bfb0-de20-5000-8ca7-80f57d26f881"
 
@@ -12,9 +13,10 @@ MPI = ">=0.19"
 julia = ">= 1.6"
 
 [extras]
+BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 Coverage = "a2441757-f6aa-5fb2-8edb-039e3f45d037"
 InteractiveUtils = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test", "InteractiveUtils", "Coverage"]
+test = ["Test", "InteractiveUtils", "Coverage", "BenchmarkTools"]
