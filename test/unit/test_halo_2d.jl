@@ -55,7 +55,7 @@ function test_edge_sync_2darray_2halo_no_periodic()
     A_jlo_halo = @view A.data[ilo:ihi, jlo_halo_start:jlo_halo_end]
     A_jhi_halo = @view A.data[ilo:ihi, jhi_halo_start:jhi_halo_end]
 
-    sync_edges!(A)
+    updatehalo!(A)
 
     if rank == 0
         ihi_neighbor_ilo_edge = rank_data(ni,nj,1)[1:nhalo,:]
@@ -91,7 +91,7 @@ function test_edge_sync_2darray_2halo_all_periodic()
     A_jlo_halo = @view A.data[ilo:ihi, jlo_halo_start:jlo_halo_end]
     A_jhi_halo = @view A.data[ilo:ihi, jhi_halo_start:jhi_halo_end]
 
-    sync_edges!(A)
+    updatehalo!(A)
   
     if rank == 0
         ihi_neighbor_ilo_edge = rank_data(ni,nj,1)[1:nhalo,:]

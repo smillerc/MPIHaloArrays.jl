@@ -67,7 +67,7 @@ function test_edge_sync_3darray_2halo_no_periodic()
     A_ihijlokhi_halo = @view A.data[ihi_halo_start:ihi_halo_end, jlo_halo_start:jlo_halo_end, khi_halo_start:khi_halo_end]
     A_ihijhikhi_halo = @view A.data[ihi_halo_start:ihi_halo_end, jhi_halo_start:jhi_halo_end, khi_halo_start:khi_halo_end]
 
-    sync_edges!(A)
+    updatehalo!(A)
 
     if rank == 0
         @test all(A_ilo_halo .== -1)
@@ -161,7 +161,7 @@ function test_edge_sync_3darray_2halo_all_periodic()
     A_ihijlokhi_halo = @view A.data[ihi_halo_start:ihi_halo_end, jlo_halo_start:jlo_halo_end, khi_halo_start:khi_halo_end]
     A_ihijhikhi_halo = @view A.data[ihi_halo_start:ihi_halo_end, jhi_halo_start:jhi_halo_end, khi_halo_start:khi_halo_end]
 
-    sync_edges!(A)
+    updatehalo!(A)
 
     if rank == 0
         @test all(A_ilo_halo .== 1)

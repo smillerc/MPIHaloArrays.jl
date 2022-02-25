@@ -1,7 +1,7 @@
 # module ParallelTopologies
 
-# using MPI
-# using OffsetArrays
+using MPI
+using OffsetArrays
 
 # export ParallelTopology, CartesianTopology
 # export ilo_neighbor, ihi_neighbor, jlo_neighbor, jhi_neighbor, klo_neighbor, khi_neighbor, neighbor, neighbors

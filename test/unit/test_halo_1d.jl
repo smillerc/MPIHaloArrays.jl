@@ -27,7 +27,7 @@ function test_edge_sync_1darray_2halo_no_periodic()
     A_ilo_halo = @view A.data[ilo_halo_start:ilo_halo_end]
     A_ihi_halo = @view A.data[ihi_halo_start:ihi_halo_end]
 
-    sync_edges!(A)
+    updatehalo!(A)
 
     if rank == 0
         @test all(A_ilo_halo .== -1)
@@ -73,7 +73,7 @@ function test_edge_sync_1darray_2halo_all_periodic()
     A_ilo_halo = @view A.data[ilo_halo_start:ilo_halo_end]
     A_ihi_halo = @view A.data[ihi_halo_start:ihi_halo_end]
 
-    sync_edges!(A)
+    updatehalo!(A)
 
     if rank == 0
         @test all(A_ilo_halo .== 7)

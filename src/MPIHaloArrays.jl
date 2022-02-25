@@ -13,7 +13,7 @@ export ParallelTopology, CartesianTopology
 export neighbor, neighbors
 export ilo_neighbor, ihi_neighbor, jlo_neighbor, jhi_neighbor, klo_neighbor, khi_neighbor
 export lo_indices, hi_indices, fillhalo!, filldomain!
-export sync_edges!
+export updatehalo!
 export scatterglobal, gatherglobal
 
 struct DataIndices{T <: Integer}
@@ -48,7 +48,7 @@ mutable struct MPIHaloArray{T,N} <: AbstractArray{T,N}
 end
 
 include("utils/indexing.jl")
-include("sync_edges.jl")
+include("updatehalo.jl")
 include("scattergather.jl")
 
 """MPIHaloArray constructor

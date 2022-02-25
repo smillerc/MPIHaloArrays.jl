@@ -217,7 +217,7 @@ function sync_edges_rma!(A::MPIHaloArray{T,3}) where {T}
     return nothing
 end
 
-function sync_edges!(A::MPIHaloArray{T,1}) where {T}
+function updatehalo!(A::MPIHaloArray{T,1}) where {T}
     ilo_halo_start, ilo_halo_end = A.local_indices[1].lo_halo
     ihi_halo_start, ihi_halo_end = A.local_indices[1].hi_halo
     ilo_dom_start, ilo_dom_end = A.local_indices[1].lo_halo_domain_donor
@@ -251,7 +251,7 @@ function sync_edges!(A::MPIHaloArray{T,1}) where {T}
     return nothing
 end
 
-function sync_edges!(A::MPIHaloArray{T,2}) where {T}
+function updatehalo!(A::MPIHaloArray{T,2}) where {T}
     ilo_halo_start, ilo_halo_end = A.local_indices[1].lo_halo
     ihi_halo_start, ihi_halo_end = A.local_indices[1].hi_halo
     ilo_dom_start, ilo_dom_end = A.local_indices[1].lo_halo_domain_donor
@@ -351,7 +351,7 @@ function sync_edges!(A::MPIHaloArray{T,2}) where {T}
     return nothing
 end
 
-function sync_edges!(A::MPIHaloArray{T,3}) where {T}
+function updatehalo!(A::MPIHaloArray{T,3}) where {T}
     ilo_halo_start, ilo_halo_end = A.local_indices[1].lo_halo
     ihi_halo_start, ihi_halo_end = A.local_indices[1].hi_halo
     ilo_dom_start, ilo_dom_end = A.local_indices[1].lo_halo_domain_donor
