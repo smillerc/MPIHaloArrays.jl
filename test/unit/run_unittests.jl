@@ -1,26 +1,24 @@
-using Test, MPI
-
-nprocs_str = get(ENV, "JULIA_MPI_TEST_NPROCS","")
-
+using Test, MPI, BenchmarkTools
 
 testdir = @__DIR__
-istest(f) = endswith(f, ".jl") && startswith(f, "test_")
-testfiles = sort(filter(istest, readdir(testdir)))
-if length(testfiles) < 1 error("No tests files found!") end
 
-testfiles = [
+# No MPI needed for these tests
+@time @testset "Partitioning Tests" begin include("test_partitioning.jl") end
+
+mpi_testfiles = [
     ("test_edge_sync_1d.jl", 8),
     ("test_edge_sync_2d.jl", 8),
-    # ("test_edge_sync_3d.jl", 8),
-    # ("test_indexing.jl", 16),
-    # ("test_topology_1d.jl", 16),
-    # ("test_topology_2d.jl", 16),
-    # ("test_topology_3d.jl", 16),
-    # ("test_mpihaloarray.jl", 8),
+    ("test_edge_sync_3d.jl", 8),
+    ("test_indexing.jl", 16),
+    ("test_topology_1d.jl", 16),
+    ("test_topology_2d.jl", 16),
+    ("test_topology_3d.jl", 16),
+    ("test_mpihaloarray.jl", 8),
+    ("test_scattergather.jl", 8),
     ]
 
-# Run each test with the mpiexec command
-@testset "$(f[1])" for f in testfiles
+# Run each test with the mpiexec command -- this requires special treatment due to MPI
+@testset "$(f[1])" for f in mpi_testfiles
     file, nprocs = f
     mpiexec() do cmd
         # e.g. run `mpiexec -n 4 julia test_somthing.jl`
