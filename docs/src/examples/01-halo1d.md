@@ -36,7 +36,7 @@ updatehalo!(A)
 if rank == 0 println("\nAfter Sync") end
 print_haloarray(A)
 
-if rank == 0 println("Note that the low boundary on 0 and high boundary on 7 are -1 since the domain is not periodic") end
+if rank == 0 println("Note that the low boundary on 0 and high boundary on 7 are -1 (non-periodic)") end
 GC.gc()
 MPI.Finalize()
 ```
@@ -62,5 +62,5 @@ Rank 4: [91, 104, 14, 28, 42, 56, 70, 84, 98, 112, 15, 30]
 Rank 5: [98, 112, 15, 30, 45, 60, 75, 90, 105, 120, 16, 32]
 Rank 6: [105, 120, 16, 32, 48, 64, 80, 96, 112, 128, 17, 34]
 Rank 7: [112, 128, 17, 34, 51, 68, 85, 102, 119, 136, -1, -1]
-Note that the low boundary on 0 and high boundary on 7 are -1 since the domain is not periodic
+Note that the low boundary on 0 and high boundary on 7 are -1 (non-periodic)
 ```
