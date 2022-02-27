@@ -57,4 +57,4 @@ makedocs(
     sitename = "MPIHaloArrays.jl"
 )
 
-deploydocs(repo = "https://github.com/smillerc/MPIHaloArrays.jl")
+deploydocs(repo = "https://github.com/smillerc/MPIHaloArrays.jl", devbranch = "main",)
