@@ -29,7 +29,7 @@ function scatterglobal(A::AbstractArray{T, 1}, root::Int, nhalo::Int, topology::
         A_vbuf = VBuffer(nothing)
     end
         
-    local_size = MPI.Scatter(size_ubuf, NTuple{1,Int}, root, topology.comm)
+    local_size = MPI.Scatter(size_ubuf, NTuple{1, Int64}, root, topology.comm)
 
     A_local = MPI.Scatterv!(A_vbuf, Array{T, 1}(undef, local_size), root, topology.comm)
 
@@ -58,7 +58,7 @@ function scatterglobal(A::AbstractArray{T, 2}, root::Int, nhalo::Int, topology::
         A_vbuf = VBuffer(nothing)
     end
         
-    local_size = MPI.Scatter(size_ubuf, NTuple{2,Int}, root, topology.comm)
+    local_size = MPI.Scatter(size_ubuf, NTuple{2, Int64}, root, topology.comm)
 
     A_local = MPI.Scatterv!(A_vbuf, Array{T, 2}(undef, local_size), root, topology.comm)
 
@@ -88,7 +88,7 @@ function scatterglobal(A::AbstractArray{T, 3}, root::Int, nhalo::Int, topology::
         A_vbuf = VBuffer(nothing)
     end
         
-    local_size = MPI.Scatter(size_ubuf, NTuple{3,Int}, root, topology.comm)
+    local_size = MPI.Scatter(size_ubuf, NTuple{3, Int64}, root, topology.comm)
     A_local = MPI.Scatterv!(A_vbuf, Array{T, 3}(undef, local_size), root, topology.comm)
 
     return MPIHaloArray(A_local, topology, nhalo; do_corners = do_corners, com_model = com_model)
