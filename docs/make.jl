@@ -57,6 +57,6 @@ makedocs(
     sitename = "MPIHaloArrays.jl"
 )
 
-deploydocs(repo = "https://github.com/smillerc/MPIHaloArrays.jl.git",
+deploydocs(repo = "github.com/smillerc/MPIHaloArrays.jl.git",
            branch = "gh-pages",
            devbranch = "main",)
