@@ -1,11 +1,11 @@
-# MPIHaloArrays.jl - Work in progress
+# MPIHaloArrays.jl
 
 
 [![](https://img.shields.io/badge/docs-stable-blue.svg)](https://smillerc.github.io/MPIHaloArrays.jl/stable)
 [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://smillerc.github.io/MPIHaloArrays.jl/dev)
 [![License: MIT](https://img.shields.io/badge/License-MIT-success.svg)](https://opensource.org/licenses/MIT)
 
-<img src="../docs/../MPIHaloArrays/docs/src/assets/logo.png" alt="drawing" width="200"/>
+<!-- <img src="../docs/../MPIHaloArrays/docs/src/assets/logo.png" alt="drawing" width="200"/> -->
 
 MPIHaloArrays is a high-level array type to help with halo, or ghost-cell exchanges commonly found in large-scale PDE problems. Very similar in goals and design to `MPIArrays.jl` and `ImplicitGlobalGrid.jl`. Domains can be decomposed into 1, 2, or 3D topology. 
 
