@@ -5,6 +5,7 @@
 /docs/build/
 /docs/Manifest.toml
 /build/
+.DS_Store
 *~
 *#*
 *#*#

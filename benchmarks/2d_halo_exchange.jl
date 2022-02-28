@@ -19,7 +19,11 @@ nj = 512
 data = rand(Float64, ni, nj)
 A = MPIHaloArray(data, topology, nhalo)
 
-@time benchmark_halo_exchange(A)
+b = @benchmark benchmark_halo_exchange($A) evals=2 teardown=(MPI.Barrier(comm))
+
+if rank == 0
+    show(stdout, MIME("text/plain"), b)
+end
 
 GC.gc()
 MPI.Finalize()

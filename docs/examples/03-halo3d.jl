@@ -7,17 +7,18 @@ const nprocs = MPI.Comm_size(comm)
 
 @assert nprocs == 8 "This example is designed with 8 processes..."
 
-topology = CartesianTopology([2,2,2], [false, false, true])
+topology = CartesianTopology([2,2,2], [false,false,false])
 
-# nhalo = 2
-# ni = 6
-# nj = 5
+nhalo = 2
+ni = 8
+nj = 8
+nk = 8
 
-# data = rank_data(ni, nj, rank)
-# A = MPIHaloArray(data, topology, nhalo)
-# fillhalo!(A, -1)
+A = MPIHaloArray(zeros(Int, ni, nj, nk), topology, nhalo; do_corners=true)
+filldomain!(A, rank)
+fillhalo!(A, -1)
 
-# updatehalo!(A)
+updatehalo!(A)
 
 GC.gc()
 MPI.Finalize()

@@ -9,15 +9,14 @@ const nprocs = MPI.Comm_size(comm)
 
 topology = CartesianTopology([4,2], [false, false])
 
-# nhalo = 2
-# ni = 6
-# nj = 5
+nhalo = 2
+ni = 6
+nj = 5
 
-# data = rank_data(ni, nj, rank)
-# A = MPIHaloArray(data, topology, nhalo)
-# fillhalo!(A, -1)
+A = MPIHaloArray(rand(ni, nj), topology, nhalo)
+fillhalo!(A, -1)
 
-# updatehalo!(A)
+updatehalo!(A)
 
 GC.gc()
 MPI.Finalize()

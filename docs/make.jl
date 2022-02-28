@@ -50,8 +50,9 @@ makedocs(
         "MPIHaloArrays.jl" => "index.md",
         "Examples" => EXAMPLES,
         "Reference" => [
-            "MPIHaloArray" => "mpihaloarray.md",
-            "Topology" => "topology.md",
+            # "MPIHaloArray" => "mpihaloarray.md",
+            # "Topology" => "topology.md",
+            "API" => "api.md"
         ]
     ],
     sitename = "MPIHaloArrays.jl"
