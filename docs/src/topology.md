@@ -1,8 +1,6 @@
 # ParallelTopology
 
-The parallel topology
-
-this is a test
+Parallel topology sets up the neighbors
 
 ```@docs
 MPIHaloArrays.ParallelTopology
