@@ -26,7 +26,7 @@ Halo exchange is a common practice in large-scale PDE codes that decompose the d
 
 <img src="docs/src/assets/1d_halo.png" alt="MPIHaloArrays.jl" width="600">
 
-Halo exchanges can be done in multiple dimensions. At the moment, `MPIHaloArrays.jl` limits this to 1-3D arrays, but this will be extended in the future. This example below how to set up the initial array, fill the halo/domain cells, and do a halo exchange.
+Halo exchanges can be done in multiple dimensions. At the moment, `MPIHaloArrays.jl` limits this to 1-3D arrays, but this will be extended in the future. The example below shows how to set up the initial array, fill halo/domain cells, do a halo exchange, and more.
 
 **Currently arrays are limited to 1, 2, or 3D. This will be addressed in future versions**
 ```julia
