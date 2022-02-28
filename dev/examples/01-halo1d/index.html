@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>1D Halo Example · MPIHaloArrays.jl</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit">MPIHaloArrays.jl</span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">MPIHaloArrays.jl</a></li><li><span class="tocitem">Examples</span><ul><li class="is-active"><a class="tocitem" href>1D Halo Example</a></li><li><a class="tocitem" href="../02-halo2d/">2D Halo Example</a></li><li><a class="tocitem" href="../03-halo3d/">3D Halo Example</a></li></ul></li><li><span class="tocitem">Reference</span><ul><li><a class="tocitem" href="../../mpihaloarray/">MPIHaloArray</a></li><li><a class="tocitem" href="../../topology/">Topology</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>1D Halo Example</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>1D Halo Example</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/smillerc/MPIHaloArrays.jl" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="D-Halo-Example"><a class="docs-heading-anchor" href="#D-Halo-Example">1D Halo Example</a><a id="D-Halo-Example-1"></a><a class="docs-heading-anchor-permalink" href="#D-Halo-Example" title="Permalink"></a></h1><pre><code class="language-julia"># examples/01-halo1d.jl
+using MPI, MPIHaloArrays
+
+MPI.Init()
+const comm = MPI.COMM_WORLD
+const rank = MPI.Comm_rank(comm)
+const nprocs = MPI.Comm_size(comm)
+
+@assert nprocs == 8 &quot;This example is designed with 8 processes...&quot;
+
+function print_haloarray(A)
+    for p in 0:nprocs-1
+        if rank == p
+            println(&quot;Rank $(p): $(A)&quot;)
+        end
+        MPI.Barrier(comm)
+    end
+end
+
+topology = CartesianTopology(8, false)
+
+nhalo = 2
+ni = 8
+data = collect(1:ni) * (rank + 10)
+A = MPIHaloArray(data, topology, nhalo)
+fillhalo!(A, -1)
+
+if rank == 0 println(&quot;Before Sync&quot;) end
+print_haloarray(A)
+
+updatehalo!(A)
+
+if rank == 0 println(&quot;\nAfter Sync&quot;) end
+print_haloarray(A)
+
+if rank == 0 println(&quot;Note that the low boundary on 0 and high boundary on 7 are -1 (non-periodic)&quot;) end
+GC.gc()
+MPI.Finalize()</code></pre><pre><code class="language-none">&gt; mpiexecjl -n 8 julia examples/01-halo1d.jl
+Before Sync
+Rank 0: [-1, -1, 10, 20, 30, 40, 50, 60, 70, 80, -1, -1]
+Rank 1: [-1, -1, 11, 22, 33, 44, 55, 66, 77, 88, -1, -1]
+Rank 2: [-1, -1, 12, 24, 36, 48, 60, 72, 84, 96, -1, -1]
+Rank 3: [-1, -1, 13, 26, 39, 52, 65, 78, 91, 104, -1, -1]
+Rank 4: [-1, -1, 14, 28, 42, 56, 70, 84, 98, 112, -1, -1]
+Rank 5: [-1, -1, 15, 30, 45, 60, 75, 90, 105, 120, -1, -1]
+Rank 6: [-1, -1, 16, 32, 48, 64, 80, 96, 112, 128, -1, -1]
+Rank 7: [-1, -1, 17, 34, 51, 68, 85, 102, 119, 136, -1, -1]
+
+After Sync
+Rank 0: [-1, -1, 10, 20, 30, 40, 50, 60, 70, 80, 11, 22]
+Rank 1: [70, 80, 11, 22, 33, 44, 55, 66, 77, 88, 12, 24]
+Rank 2: [77, 88, 12, 24, 36, 48, 60, 72, 84, 96, 13, 26]
+Rank 3: [84, 96, 13, 26, 39, 52, 65, 78, 91, 104, 14, 28]
+Rank 4: [91, 104, 14, 28, 42, 56, 70, 84, 98, 112, 15, 30]
+Rank 5: [98, 112, 15, 30, 45, 60, 75, 90, 105, 120, 16, 32]
+Rank 6: [105, 120, 16, 32, 48, 64, 80, 96, 112, 128, 17, 34]
+Rank 7: [112, 128, 17, 34, 51, 68, 85, 102, 119, 136, -1, -1]
+Note that the low boundary on 0 and high boundary on 7 are -1 (non-periodic)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../">« MPIHaloArrays.jl</a><a class="docs-footer-nextpage" href="../02-halo2d/">2D Halo Example »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Monday 28 February 2022 17:35">Monday 28 February 2022</span>. Using Julia version 1.6.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
