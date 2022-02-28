@@ -1,13 +1,11 @@
-# MPIHaloArrays.jl
-
+<h1> <img src="docs/src/assets/logo.png" alt="MPIHaloArrays.jl" width="50"> MPIHaloArrays.jl </h1>
 
 [![](https://img.shields.io/badge/docs-stable-blue.svg)](https://smillerc.github.io/MPIHaloArrays.jl/stable)
 [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://smillerc.github.io/MPIHaloArrays.jl/dev)
 [![License: MIT](https://img.shields.io/badge/License-MIT-success.svg)](https://opensource.org/licenses/MIT)
 
-<!-- <img src="../docs/../MPIHaloArrays/docs/src/assets/logo.png" alt="drawing" width="200"/> -->
 
-MPIHaloArrays is a high-level array type to help with halo, or ghost-cell exchanges commonly found in large-scale PDE problems. Very similar in goals and design to `MPIArrays.jl` and `ImplicitGlobalGrid.jl`. Domains can be decomposed into 1, 2, or 3D topology. 
+MPIHaloArrays is a high-level array type to facilitate halo, or ghost-cell exchanges commonly found in large-scale PDE codes. Inspiration was taken from [`MPIArrays.jl`](https://github.com/barche/MPIArrays.jl) and [`ImplicitGlobalGrid.jl`](https://github.com/eth-cscs/ImplicitGlobalGrid.jl). Domains can be decomposed into 1, 2, or 3D parallel topologies. 
 
 ## Installation
 
@@ -24,7 +22,11 @@ pkg> add MPIHaloArrays
 
 ## Basic Usage
 
-This example shows how to set up the initial array, fill the halo/domain cells, and do a halo exchange.
+Halo exchange is a common practice in large-scale PDE codes that decompose the domain into many sub-domains. Neighbor information is exchanged at regular intervals through "ghost" or "halo" cell regions. The image below shows an example from a 1D array that has a halo region of 3 cells.
+
+<img src="docs/src/assets/1d_halo.png" alt="MPIHaloArrays.jl" width="600">
+
+Halo exchanges can be done in multiple dimensions. At the moment, `MPIHaloArrays.jl` limits this to 1-3D arrays, but this will be extended in the future. This example below how to set up the initial array, fill the halo/domain cells, and do a halo exchange.
 
 **Currently arrays are limited to 1, 2, or 3D. This will be addressed in future versions**
 ```julia
