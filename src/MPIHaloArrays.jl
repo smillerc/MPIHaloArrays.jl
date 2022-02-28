@@ -15,6 +15,7 @@ export ilo_neighbor, ihi_neighbor, jlo_neighbor, jhi_neighbor, klo_neighbor, khi
 export lo_indices, hi_indices, fillhalo!, filldomain!
 export updatehalo!
 export scatterglobal, gatherglobal
+export localindices, globalindices
 
 struct DataIndices{T <: Integer}
     lo_halo::NTuple{2,T}               # (start,end) indices of the halo region on the low side
@@ -222,6 +223,41 @@ function filldomain!(A::MPIHaloArray{T,3}, fillval) where {T}
     fill!(domA, fillval)
 end
 
+function localindices(A::MPIHaloArray{T,1}) where {T}
+    ilo, ihi = A.local_indices[1].domain
+    return (ilo, ihi)
+end
+
+function localindices(A::MPIHaloArray{T,2}) where {T}
+    ilo, ihi = A.local_indices[1].domain
+    jlo, jhi = A.local_indices[2].domain
+    return (ilo, ihi, jlo, jhi)
+end
+
+function localindices(A::MPIHaloArray{T,3}) where {T}
+    ilo, ihi = A.local_indices[1].domain
+    jlo, jhi = A.local_indices[2].domain
+    klo, khi = A.local_indices[3].domain
+    return (ilo, ihi, jlo, jhi, klo, khi)
+end
+
+function globalindices(A::MPIHaloArray{T,1}) where {T}
+    ilo, ihi = A.global_indices[1].domain
+    return (ilo, ihi)
+end
+
+function globalindices(A::MPIHaloArray{T,2}) where {T}
+    ilo, ihi = A.global_indices[1].domain
+    jlo, jhi = A.global_indices[2].domain
+    return (ilo, ihi, jlo, jhi)
+end
+
+function globalindices(A::MPIHaloArray{T,3}) where {T}
+    ilo, ihi = A.global_indices[1].domain
+    jlo, jhi = A.global_indices[2].domain
+    klo, khi = A.global_indices[3].domain
+    return (ilo, ihi, jlo, jhi, klo, khi)
+end
 
 # include("ops.jl")
 
