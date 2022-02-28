@@ -1,6 +1,6 @@
 # MPIHaloArray
 
-this is a test
+This is an example
 
 ```@docs
 MPIHaloArrays.MPIHaloArray
