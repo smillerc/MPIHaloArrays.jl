@@ -20,7 +20,7 @@ const k = 0
 @assert nprocs == 16 "Topology neighbor tests are designed with 16 processes only"
 
 function test_4x4_topology_all_periodic()
-    P = CartesianTopology([4,4], [true, true])
+    P = CartesianTopology(comm, [4,4], [true, true])
 
     # Layout for 4x4 domain; rank and (coords) are shown
     
@@ -91,7 +91,7 @@ function test_4x4_topology_all_periodic()
 end
 
 function test_4x4_topology_no_periodic()
-    P = CartesianTopology([4,4], [false, false])
+    P = CartesianTopology(comm, [4,4], [false, false])
 
     # Layout for 4x4 domain; rank and (coords) are shown
     

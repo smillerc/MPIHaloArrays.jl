@@ -38,7 +38,7 @@ struct CartesianTopology <: ParallelTopology
     comm::MPI.Comm
     nprocs::Int
     rank::Int
-    coords::Vector{Int}      # [i, j, k]; coordinates in the
+    coords::NTuple{3,Int}    # [i, j, k]; coordinates in the toplogy
     global_dims::Vector{Int} # [i, j, k]; number of domains in each direction
     isperiodic::Vector{Bool} # [i, j, k]; is this dimension periodic?
     neighbors::OffsetArray{Int, 3}   # [[ilo, center, ihi], i, j, k]; defaults to -1 if no neighbor
@@ -62,15 +62,15 @@ end
 #    /       /       /       /    |   / | 
 #   +-------+-------+-------+     | /   |
 #   |       |       |       |     +     |
-#   | (1,1) | (0,1) | (1,1) |   / |     +
+#   |       |       |       |   / |     +
 #   |       |       |       | /   |   / | 
 #   +-------+-------+-------+     | /   |
 #   |       |       |       |     +     |
-#   | (-1,0)| (0,0) | (1,2) |   / |     +
+#   |       |       |       |   / |     +
 #   |       |       |       | /   |   / 
 #   +-------+-------+-------+     | /   
 #   |       |       |       |     + 
-#   |(-1,-1)| (0,-1)| (2,2) |   /
+#   |       |       |       |   /
 #   |       |       |       | /
 #   +-------+-------+-------+
 
@@ -90,8 +90,8 @@ Create a CartesianTopology type that holds neighbor information, current rank, e
 P = CartesianTopology([4,4], [true, true])
 ```
 """
-function CartesianTopology(dims::Vector{Int}, periodicity::Vector{Bool}; canreorder = false)
-    comm = MPI.COMM_WORLD
+function CartesianTopology(comm::MPI.Comm, dims::Vector{Int}, periodicity::Vector{Bool}; canreorder = false)
+    # comm = MPI.COMM_WORLD
     rank = MPI.Comm_rank(comm)
     nprocs = MPI.Comm_size(comm)
 
@@ -100,11 +100,15 @@ function CartesianTopology(dims::Vector{Int}, periodicity::Vector{Bool}; canreor
     mpi_periodicity = reverse(periodicity)
 
     @assert length(dims) == length(periodicity) "You must specify periodicity (true/false) for each dimension"
-    @assert prod(dims) == nprocs "Too many dimensions for the given number of processes"
+    @assert prod(dims) == nprocs "The number of subdomains ($(prod(dims))) doesn't match the number of procs ($(nprocs)) provided"
 
     comm_cart = MPI.Cart_create(comm, mpi_dims, mpi_periodicity .|> Int, canreorder)
-    # coords = MPI.Cart_coords(comm_cart)
     coords = MPI.Cart_coords(comm_cart) |> reverse
+    if length(coords) < 3
+        coords_tuple = vcat(coords, zeros(Int,3 - length(coords))) |> Tuple
+    else
+        coords_tuple = coords |> Tuple
+    end
     neighbors = OffsetArray(-ones(Int8,3,3,3), -1:1, -1:1, -1:1)
 
     # MPI convention is (k, j, i), or (z, y, x) which is annoying
@@ -169,11 +173,29 @@ function CartesianTopology(dims::Vector{Int}, periodicity::Vector{Bool}; canreor
 
     end
 
-    CartesianTopology(comm_cart, nprocs, rank, coords, dims, periodicity, neighbors)
+    CartesianTopology(comm_cart, nprocs, rank, coords_tuple, dims, periodicity, neighbors)
 end
 
-function CartesianTopology(dims::Int, periodicity::Bool; canreorder = false)
-    CartesianTopology([dims], [periodicity]; canreorder = canreorder)
+function CartesianTopology(comm::MPI.Comm, dims::Int, periodicity::Bool; canreorder = false)
+    CartesianTopology(comm, [dims], [periodicity]; canreorder = canreorder)
+end
+
+function CartesianTopology(comm::MPI.Comm, periodicity::Vector{Bool}; canreorder = false)
+    nprocs = MPI.Comm_size(comm)
+    if length(periodicity) == 3
+        dims = num_3d_tiles(nprocs)
+    elseif length(periodicity) == 2
+        dims = num_2d_tiles(nprocs)
+    elseif length(periodicity) == 1
+        dims = nprocs
+    end
+
+    CartesianTopology(comm, dims, periodicity; canreorder = canreorder)
+end
+
+function CartesianTopology(comm::MPI.Comm, periodicity::Bool; canreorder = false)
+    nprocs = MPI.Comm_size(comm)
+    CartesianTopology(comm, nprocs, periodicity; canreorder = canreorder)
 end
 
 

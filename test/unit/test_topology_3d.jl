@@ -20,7 +20,7 @@ const k = 0
 @assert nprocs == 16 "Topology neighbor tests are designed with 16 processes only"
 
 function test_2x2x4_topology_all_periodic()
-    P = CartesianTopology([2,2,4], [true, true, true])
+    P = CartesianTopology(comm, [2,2,4], [true, true, true])
 
     # klo
     # 15   14  15   jhi
@@ -79,7 +79,7 @@ function test_2x2x4_topology_all_periodic()
 end
 
 function test_2x2x4_topology_no_periodic()
-    P = CartesianTopology([2,2,4], [false, false, false])
+    P = CartesianTopology(comm, [2,2,4], [false, false, false])
 
 
     #      / (k)

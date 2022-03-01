@@ -13,8 +13,8 @@ thisfile = @__FILE__
 
 function test_1d_array()
     # Create the MPI topology, which here is a Cartesian 4x4 domain (using 16 cores)
-    # topology = CartesianTopology([4,4], [true, true])
-    topology = CartesianTopology(8, true)
+    # topology = CartesianTopology(comm, [4,4], [true, true])
+    topology = CartesianTopology(comm, 8, true)
 
     # How many halo cells in each dimension (fixed for all dimensions)
     nhalo = 3
@@ -37,8 +37,38 @@ function test_1d_array()
     end
 end
 
+function test_2d_array_1d_toplogy()
+    nhalo = 2
+    topology = CartesianTopology(comm, 8, true)
+    A = MPIHaloArray(rand(10,20), topology, nhalo)
+end
+
+function test_2d_array_2d_toplogy()
+    nhalo = 2
+    topology = CartesianTopology(comm, [4,2], [true,true])
+    A = MPIHaloArray(rand(10,20), topology, nhalo)
+end
+
+function test_3d_array_1d_toplogy()
+    nhalo = 2
+    topology = CartesianTopology(comm, 8, true)
+    A = MPIHaloArray(rand(10,20,15), topology, nhalo)
+end
+
+function test_3d_array_2d_toplogy()
+    nhalo = 2
+    topology = CartesianTopology(comm, [4,2], [true,true])
+    A = MPIHaloArray(rand(10,20,15), topology, nhalo)
+end
+
+function test_3d_array_3d_toplogy()
+    nhalo = 2
+    topology = CartesianTopology(comm, [2,2,2], [true,true,true])
+    A = MPIHaloArray(rand(10,20,15), topology, nhalo)
+end
+
 function test_2d_array()
-    topology = CartesianTopology([4,2], [true,true])
+    topology = CartesianTopology(comm, [4,2], [true,true])
 
     # How many halo cells in each dimension (fixed for all dimensions)
     nhalo = 2
@@ -50,7 +80,7 @@ function test_2d_array()
 
     if x.topology.rank == 1
         # i dim
-        @test all(x.topology.coords .== (1,0))
+        @test all(x.topology.coords .== (1,0,0))
 
         @test all(x.local_indices[1].lo_halo .== (1,2))
         @test all(x.local_indices[1].lo_halo_domain_donor == (3,4))
@@ -80,7 +110,7 @@ function test_2d_array()
         @test all(x.global_indices[2].hi_halo == (23,24))
     elseif x.topology.rank == 4
 
-        @test all(x.topology.coords .== (0,1))
+        @test all(x.topology.coords .== (0,1,0))
 
         # i dim
         @test all(x.local_indices[1].lo_halo .== (1,2))
@@ -112,7 +142,7 @@ function test_2d_array()
 end
 
 function test_3d_array()
-    topology = CartesianTopology([2,2,2], [true,true,true])
+    topology = CartesianTopology(comm, [2,2,2], [true,true,true])
 
     # How many halo cells in each dimension (fixed for all dimensions)
     nhalo = 2
@@ -210,15 +240,15 @@ function test_3d_array()
     end
 end
 
-# n halo cells ≥ n real cells
-# @test_throws AssertionError MPIHaloArray(zeros(6,6), topology, 6)
-
-# Fill each by the current rank
-# fill!(x, rank)
-
 test_1d_array()
 test_2d_array()
 test_3d_array()
+
+test_2d_array_1d_toplogy()
+test_2d_array_2d_toplogy()
+test_3d_array_1d_toplogy()
+test_3d_array_2d_toplogy()
+test_3d_array_3d_toplogy()
 
 GC.gc()
 MPI.Finalize()

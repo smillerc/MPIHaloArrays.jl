@@ -12,8 +12,8 @@ const nprocs = MPI.Comm_size(comm)
 @assert nprocs == 16 "MPIHaloArray tests are designed with 16 processes only"
 
 function test_2d_indices()
-    topology = CartesianTopology([4,4], [false, false])
-    # topology = CartesianTopology([1], [false])
+    topology = CartesianTopology(comm, [4,4], [false, false])
+    # topology = CartesianTopology(comm, [1], [false])
 
     nhalo = 2
     ni = 4
@@ -49,7 +49,7 @@ function test_2d_indices()
 end
 
 function test_2d_indices_offset()
-    topology = CartesianTopology([4,4], [false, false])
+    topology = CartesianTopology(comm, [4,4], [false, false])
 
     nhalo = 2
     ni = 6

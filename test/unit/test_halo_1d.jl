@@ -11,7 +11,7 @@ const nprocs = MPI.Comm_size(comm)
 @assert nprocs == 8 "This MPIHaloArray edge_sync test is designed with 4 processes only"
 
 function test_edge_sync_1darray_2halo_no_periodic()
-    topology = CartesianTopology(8, false)
+    topology = CartesianTopology(comm, 8, false)
 
     nhalo = 2
     ni = 8
@@ -57,7 +57,7 @@ function test_edge_sync_1darray_2halo_no_periodic()
 end
 
 function test_edge_sync_1darray_2halo_all_periodic()
-    topology = CartesianTopology(8, true)
+    topology = CartesianTopology(comm, 8, true)
 
     nhalo = 2
     ni = 8

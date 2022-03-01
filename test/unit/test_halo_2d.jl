@@ -31,8 +31,8 @@ function rank_data(ni, nj, rank)
 end
 
 function test_edge_sync_2darray_2halo_no_periodic()
-    topology = CartesianTopology([4,2], [false, false])
-    # topology = CartesianTopology([4,2], [true, true])
+    topology = CartesianTopology(comm, [4,2], [false, false])
+    # topology = CartesianTopology(comm, [4,2], [true, true])
 
     nhalo = 2
     ni = 6
@@ -68,7 +68,7 @@ function test_edge_sync_2darray_2halo_no_periodic()
 end
 
 function test_edge_sync_2darray_2halo_all_periodic()
-    topology = CartesianTopology([4,2], [true, true])
+    topology = CartesianTopology(comm, [4,2], [true, true])
 
     nhalo = 2
     ni = 6
