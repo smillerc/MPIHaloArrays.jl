@@ -142,34 +142,6 @@ function gatherglobal(A::MPIHaloArray{T, 1}; root=0) where {T}
     return A_global
 end
 
-# function gatherglobal(A::MPIHaloArray{T, 2}; root=0) where {T}
-
-#     # Index ranges excluding the halo regions
-#     ilo, ihi = A.local_indices[1].domain
-#     jlo, jhi = A.local_indices[2].domain
-#     local_data = @view A.data[ilo:ihi,jlo:jhi]
-#     local_size = (ihi-ilo+1, jhi-jlo+1)
-
-#     sizes = MPI.Gather(local_size, root, A.topology.comm)
-
-#     if A.topology.rank == root
-#         size_ubuf = UBuffer(sizes, 2)
-#         counts = [prod(s) for s in sizes]
-#         global_dims = size(A.topology)
-
-#         output_dim = globalsize(sizes, global_dims)
-#         output_vbuf = VBuffer(Array{T, 2}(undef, output_dim), counts)
-#     else
-#         # these variables can be set to `nothing` on non-root processes
-#         size_ubuf = UBuffer(nothing)
-#         output_vbuf = VBuffer(nothing)
-#     end
-
-#     A_global = MPI.Gatherv!(local_data, output_vbuf, root, A.topology.comm)
-
-#     return A_global
-# end
-
 function gatherglobal(A::MPIHaloArray{T, 2}; root=0, halo_dims=(1,2)) where {T}
 
     # Index ranges excluding the halo regions
