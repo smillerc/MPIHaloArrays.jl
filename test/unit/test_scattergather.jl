@@ -51,7 +51,7 @@ function test_2darray_scatter_gather()
 
     rank_0_view = @view A_global[1:74, 1:66]
     rank_6_view = @view A_global[148:220, 67:131]
-    
+
     A_local = scatterglobal(A_global, root, nhalo, topology)
 
     ilo,ihi,jlo,jhi = localindices(A_local)
@@ -79,7 +79,20 @@ function test_3darray_scatter_gather()
     nk = 36  # use random odd numbers for weird domain shapes
 
     A_global = reshape(1:ni*nj*nk, (ni, nj, nk));
+
+    rank_0_view = @view A_global[1:147, 1:66, 1:18]
+    rank_7_view = @view A_global[148:293, 67:131, 19:36]
+
     A_local = scatterglobal(A_global, root, nhalo, topology)
+
+    ilo, ihi, jlo, jhi, klo, khi = localindices(A_local)
+
+    # Test to see if the splitting/partitioning was done correctly
+    if rank == 0
+        @test all(A_local[ilo:ihi,jlo:jhi,klo:khi] .== rank_0_view)
+    elseif rank == 7
+        @test all(A_local[ilo:ihi,jlo:jhi,klo:khi] .== rank_7_view)
+    end
 
     A_global_result = gatherglobal(A_local; root=root)
     if rank == root
@@ -89,7 +102,7 @@ end
 
 test_1darray_scatter_gather()
 test_2darray_scatter_gather()
-# test_3darray_scatter_gather()
+test_3darray_scatter_gather()
 
 GC.gc()
 MPI.Finalize()
