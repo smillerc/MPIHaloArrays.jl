@@ -8,6 +8,7 @@ This returns a `MPIHaloArray`
  - `A`: Global array to be split up into chunks and sent to all ranks. This does **not** include halo cells
  - `root`: MPI rank that `A` lives on
  - `nhalo`: Number of halo cells to create
+ - `halo_dims`: Tuple of the dimensions that halo exchanges occur on (not fully working yet)
 """
 function scatterglobal(A::AbstractArray{T, 1}, root::Int, nhalo::Int, topology::ParallelTopology; halo_dims = (1), do_corners = true, com_model = :p2p) where {T}
 
@@ -134,8 +135,8 @@ that represents the global state.
 # Arguments
  - `A`: MPIHaloArray
  - `root`: MPI rank to gather `A` to
+ - `halo_dims`: Tuple of the dimensions that halo exchanges occur on (not fully working yet)
 """
-
 function gatherglobal(A::MPIHaloArray{T, 1}; root=0, halo_dims=(1)) where {T}
 
     # Index ranges excluding the halo regions
