@@ -16,7 +16,7 @@ const i = 0
 
 function test_1D_topology_creation()
     P = CartesianTopology(comm, nprocs, true)
-    @test P.global_dims == [16]
+    @test P.global_dims == (16, 0, 0)
     for proc in 0:nprocs-1
         if rank == proc
             @test P.rank == proc
@@ -55,9 +55,27 @@ function test_16x1_topology_no_periodic()
     end
 end
 
+function test_4x4_topology_no_periodic()
+    P = CartesianTopology(comm, [4,4], [false,false])
+
+    if P.rank == 0 # test at edge
+        @test ilo_neighbor(P) == -1
+        @test ihi_neighbor(P) == 1
+        @test jlo_neighbor(P) == -1
+        @test jhi_neighbor(P) == 4
+
+    elseif P.rank == 5 # test a middle node
+        @test ilo_neighbor(P) == 4
+        @test ihi_neighbor(P) == 6
+        @test jlo_neighbor(P) == 1
+        @test jhi_neighbor(P) == 9
+    end
+end
+
 test_1D_topology_creation()
-test_16x1_topology_all_periodic()
-test_16x1_topology_no_periodic()
+test_4x4_topology_no_periodic()
+# test_16x1_topology_all_periodic()
+# test_16x1_topology_no_periodic()
 
 GC.gc()
 MPI.Finalize()
