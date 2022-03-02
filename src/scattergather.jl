@@ -9,32 +9,42 @@ This returns a `MPIHaloArray`
  - `root`: MPI rank that `A` lives on
  - `nhalo`: Number of halo cells to create
 """
-function scatterglobal(A::AbstractArray{T, 1}, root::Int, nhalo::Int, topology::ParallelTopology; do_corners = true, com_model = :p2p) where {T}
+function scatterglobal(A::AbstractArray{T, 1}, root::Int, nhalo::Int, topology::ParallelTopology; halo_dims = (1), do_corners = true, com_model = :p2p) where {T}
 
     if A isa Base.UnitRange A = collect(A) end
 
-    if topology.rank == root
-        # Divide the domain into sub-domains or tiles
-        # sizes = zeros(Int64, topology.nprocs)
-        # for p in 1:topology.nprocs
-        #     # ilo, ihi = tile_indices_1d(length(A), topology.nprocs, p)
-        #     ilo, ihi = global_to_subdomain_bounds(size(A), topology)
-        #     sizes[p] = ihi-ilo+1
-        # end
+    # coords = MPI.Allgather(topology.coords, topology.comm) # -> defaults to a NTuple{3,Int}
+    # subdomain_coords = [c[1:topology.dimension] for c in coords] # strip the unused dimensions
+    global_domain_size = size(topology)
+    
+    sizes = get_subdomain_sizes(size(A), global_domain_size, halo_dims)
+    indices = get_subdomain_indices(size(A), global_domain_size, halo_dims)
+    
+    remote_size = sizes[:,topology.rank + 1] |> Tuple
+    
+    A_local = zeros(eltype(A), remote_size)
+    remote_buf = MPI.Buffer(A_local)
+    
+    reqs = Vector{MPI.Request}(undef, 0)
 
-        sizes = split_count(length(A), topology.nprocs)
-        size_ubuf = UBuffer(sizes, 1)
-        A_vbuf = VBuffer(A, sizes)
-    else
-        # these variables can be set to `nothing` on non-root processes
-        size_ubuf = UBuffer(nothing)
-        A_vbuf = VBuffer(nothing)
+    if topology.rank == root
+        for sendrank in 0:topology.nprocs-1
+
+            # Get the indices on the root buffer to send to the remote buffer
+            ilo, ihi = indices[sendrank + 1]
+            data_on_root = @view A[ilo:ihi]
+            root_buf = MPI.Buffer(data_on_root)
+            sendtag = sendrank + 1000
+            sreq =  MPI.Isend(root_buf, sendrank, sendtag, topology.comm)
+            push!(reqs, sreq)
+        end
     end
 
-    local_size = MPI.Scatter(size_ubuf, NTuple{1, Int64}, root, topology.comm)
-
-    A_local = MPI.Scatterv!(A_vbuf, Array{T, 1}(undef, local_size), root, topology.comm)
-
+    recievetag = topology.rank + 1000
+    rreq = MPI.Irecv!(remote_buf, root, recievetag, topology.comm)
+    push!(reqs, rreq)
+    
+    MPI.Waitall!(reqs)
     return MPIHaloArray(A_local, topology, nhalo; do_corners = do_corners, com_model = com_model)
 end
 
@@ -125,27 +135,52 @@ that represents the global state.
  - `A`: MPIHaloArray
  - `root`: MPI rank to gather `A` to
 """
-function gatherglobal(A::MPIHaloArray{T, 1}; root=0) where {T}
+
+function gatherglobal(A::MPIHaloArray{T, 1}; root=0, halo_dims=(1)) where {T}
 
     # Index ranges excluding the halo regions
-    ilo, ihi = A.local_indices[1].domain
-    local_data = @view A.data[ilo:ihi]
-    local_size = ihi-ilo+1
+    ilo_l, ihi_l = localindices(A)
+    local_indices = (ilo_l, ihi_l)
+    local_data = @view A.data[ilo_l:ihi_l]
+    local_size = size(local_data)
+    local_buf = MPI.Buffer(local_data)
 
+    # Put all the indices on root so the gather below can use them
+    # indices = MPI.Gather(local_indices, root, A.topology.comm)
+    global_domain_size = size(A.topology)
     sizes = MPI.Gather(local_size, root, A.topology.comm)
-
+    
+    # Allocate the data on root
     if A.topology.rank == root
-        size_ubuf = UBuffer(sizes, 1)
-        output_dim = sum(sizes)
-        output_vbuf = VBuffer(Array{T, 1}(undef, output_dim), sizes)
-    else
-        # these variables can be set to `nothing` on non-root processes
-        size_ubuf = UBuffer(nothing)
-        output_vbuf = VBuffer(nothing)
+        global_dims = size(A.topology)
+        output_dim = sum(s[1] for s in sizes)
+        A_global = Array{T}(undef, output_dim)
+        indices = get_subdomain_indices(size(A_global), global_domain_size, halo_dims)
     end
+        
+    reqs = Vector{MPI.Request}(undef, 0)
 
-    A_global = MPI.Gatherv!(local_data, output_vbuf, root, A.topology.comm)
+    # All ranks send to root
+    sendtag = A.topology.rank + 1000
+    sreq =  MPI.Isend(local_buf, root, sendtag, A.topology.comm)
+    push!(reqs, sreq)
 
+    # Loop through all ranks and recieve from each
+    if A.topology.rank == root
+        for receiverank in 0:A.topology.nprocs-1
+
+            receivetag = receiverank + 1000
+            ilo, ihi = indices[receiverank + 1]
+            data_on_root = @view A_global[ilo:ihi]
+            root_buf = MPI.Buffer(data_on_root)
+            rreq = MPI.Irecv!(root_buf, receiverank, receivetag, A.topology.comm)
+            push!(reqs, rreq)
+        end
+    else
+        A_global = nothing
+    end
+    
+    MPI.Waitall!(reqs)
     return A_global
 end
 

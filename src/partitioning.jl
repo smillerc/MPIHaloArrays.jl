@@ -43,6 +43,21 @@ function match_tile_halo_dim_sizes(tile_dims, halo_dims)
 	new_tile_dims |> Tuple
 end
 
+function get_subdomain_sizes(A_size, tile_dims::NTuple{1,Int}, halo_dims)
+
+	# the array that hold sizes of each subdomain; [size, proc_id]
+	sizes = zeros(Int64, length(halo_dims), prod(tile_dims))
+	
+	sub_sizes = get_subdomain_dimension_sizes(A_size, tile_dims, halo_dims)
+	ranges = [UnitRange(1,length(s)) for s in sub_sizes] |> Tuple
+
+	for i in LinearIndices(ranges)
+		sizes[1,i] = sub_sizes[1][i]
+	end
+
+	sizes	
+end
+
 function get_subdomain_sizes(A_size, tile_dims::NTuple{2,Int}, halo_dims)
 
 	# the array that hold sizes of each subdomain; [size, proc_id]
@@ -136,6 +151,20 @@ function get_subdomain_indices(A_size, domain_size::NTuple{2,Int}, halo_dims)
 			jhi = jlojhi[2][j]
 			push!(lohi_indices, (ilo,ihi,jlo,jhi)) 
 		end
+	end
+	lohi_indices
+end
+
+function get_subdomain_indices(A_size, domain_size::NTuple{1,Int}, halo_dims)
+
+	ndims = length(domain_size)
+	isizes = get_subdomain_dimension_sizes(A_size, domain_size, halo_dims)
+	iloihi = get_istarts_ends(isizes[1])
+	lohi_indices = Vector{NTuple{ndims*2, Int64}}(undef, 0)
+	for i in 1:domain_size[1]
+		ilo = iloihi[1][i]
+		ihi = iloihi[2][i]
+		push!(lohi_indices, (ilo,ihi)) 
 	end
 	lohi_indices
 end
