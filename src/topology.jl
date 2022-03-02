@@ -2,6 +2,7 @@
 
 using MPI
 using OffsetArrays
+using LinearAlgebra: norm
 
 # export ParallelTopology, CartesianTopology
 # export ilo_neighbor, ihi_neighbor, jlo_neighbor, jhi_neighbor, klo_neighbor, khi_neighbor, neighbor, neighbors
@@ -38,12 +39,14 @@ struct CartesianTopology <: ParallelTopology
     comm::MPI.Comm
     nprocs::Int
     rank::Int
+    dimension::Int
     coords::NTuple{3,Int}    # [i, j, k]; coordinates in the toplogy
-    global_dims::Vector{Int} # [i, j, k]; number of domains in each direction
-    isperiodic::Vector{Bool} # [i, j, k]; is this dimension periodic?
+    global_dims::NTuple{3,Int} # [i, j, k]; number of domains in each direction
+    isperiodic::NTuple{3,Bool} # [i, j, k]; is this dimension periodic?
     neighbors::OffsetArray{Int, 3}   # [[ilo, center, ihi], i, j, k]; defaults to -1 if no neighbor
 end
 
+Base.size(C::CartesianTopology) = C.global_dims[1:C.dimension]
 #    Neighbor index convention (using offset arrays for index simplicity)
 #    An index of (0,0,1) will give the neighbor in the k+1 direction, (-1,0,-1) is in the i-1, j, k-1 direction
 #
@@ -104,20 +107,21 @@ function CartesianTopology(comm::MPI.Comm, dims::Vector{Int}, periodicity::Vecto
 
     comm_cart = MPI.Cart_create(comm, mpi_dims, mpi_periodicity .|> Int, canreorder)
     coords = MPI.Cart_coords(comm_cart) |> reverse
-    if length(coords) < 3
-        coords_tuple = vcat(coords, zeros(Int,3 - length(coords))) |> Tuple
-    else
-        coords_tuple = coords |> Tuple
-    end
+
+    coords_tuple = vec_to_ntuple(coords)
+    dims_tuple = vec_to_ntuple(dims)
+    periodicity_tuple = vec_to_ntuple(periodicity)
+    topo_dim = length(dims)
+
     neighbors = OffsetArray(-ones(Int8,3,3,3), -1:1, -1:1, -1:1)
 
     # MPI convention is (k, j, i), or (z, y, x) which is annoying
-    if length(dims) == 1
+    if topo_dim == 1
         ilo, ihi = MPI.Cart_shift(comm_cart, 0, 1)
         
         neighbors[:,  0, 0] = [ilo, rank, ihi]
 
-    elseif length(dims) == 2
+    elseif topo_dim == 2
         jlo, jhi = MPI.Cart_shift(comm_cart, 0, 1)
         ilo, ihi = MPI.Cart_shift(comm_cart, 1, 1)
 
@@ -130,7 +134,7 @@ function CartesianTopology(comm::MPI.Comm, dims::Vector{Int}, periodicity::Vecto
         neighbors[:,  0, 0] = [ilo    , rank, ihi]
         neighbors[:, -1, 0] = [jlo_ilo, jlo , jlo_ihi]
 
-    elseif length(dims) == 3
+    elseif topo_dim == 3
         ilo, ihi = MPI.Cart_shift(comm_cart, 2, 1)
         jlo, jhi = MPI.Cart_shift(comm_cart, 1, 1)
         klo, khi = MPI.Cart_shift(comm_cart, 0, 1)
@@ -173,13 +177,32 @@ function CartesianTopology(comm::MPI.Comm, dims::Vector{Int}, periodicity::Vecto
 
     end
 
-    CartesianTopology(comm_cart, nprocs, rank, coords_tuple, dims, periodicity, neighbors)
+    CartesianTopology(comm_cart, nprocs, rank, topo_dim, coords_tuple, dims_tuple, periodicity_tuple, neighbors)
+end
+
+function vec_to_ntuple(v::Vector{T}) where {T <: Number}
+    if length(v) < 3
+        return vcat(v, zeros(T, 3 - length(v))) |> Tuple
+    else
+        return v |> Tuple
+    end
+end
+
+function vec_to_ntuple(v::Vector{Bool})
+    if length(v) < 3
+        return vcat(v, falses(3 - length(v))) |> Tuple
+    else
+        return v |> Tuple
+    end
 end
 
 function CartesianTopology(comm::MPI.Comm, dims::Int, periodicity::Bool; canreorder = false)
     CartesianTopology(comm, [dims], [periodicity]; canreorder = canreorder)
 end
 
+"""Create CartesianTopology only with the vector of boundary periodicity given. 
+This finds the optimal sub-domain ordering for the user.
+"""
 function CartesianTopology(comm::MPI.Comm, periodicity::Vector{Bool}; canreorder = false)
     nprocs = MPI.Comm_size(comm)
     if length(periodicity) == 3
@@ -193,10 +216,10 @@ function CartesianTopology(comm::MPI.Comm, periodicity::Vector{Bool}; canreorder
     CartesianTopology(comm, dims, periodicity; canreorder = canreorder)
 end
 
-function CartesianTopology(comm::MPI.Comm, periodicity::Bool; canreorder = false)
-    nprocs = MPI.Comm_size(comm)
-    CartesianTopology(comm, nprocs, periodicity; canreorder = canreorder)
-end
+# function CartesianTopology(comm::MPI.Comm, periodicity::Bool; canreorder = false)
+#     nprocs = MPI.Comm_size(comm)
+#     CartesianTopology(comm, nprocs, periodicity; canreorder = canreorder)
+# end
 
 
 """Helper function to find rank based on 3D offsets"""
@@ -306,5 +329,181 @@ end
 function neighbors(p::CartesianTopology)
     p.neighbors
 end
+
+
+"""Return all common denominators of n"""
+function denominators1(n::Integer)
+    denominators = Vector{Int}(undef, 0)
+    for i in 1:n
+        if mod(n, i) == 0
+            push!(denominators, i)
+        end
+    end
+    return denominators
+end
+
+"""Returns the optimal number of tiles in (i,j) given total number of tiles n"""
+function num_2d_tiles1(n)
+    # find all common denominators of the total number of images
+    denoms = denominators(n)
+
+    # find all combinations of common denominators
+    # whose product equals the total number of images
+    dim1 = Vector{Int}(undef, 0)
+    dim2 = Vector{Int}(undef, 0)
+    for j in 1:length(denoms)
+        for i in 1:length(denoms)
+            if denoms[i] * denoms[j] == n
+                push!(dim1, denoms[i])
+                push!(dim2, denoms[j])
+            end
+        end
+    end
+    # pick the set of common denominators with the minimal norm
+    # between two elements -- rectangle closest to a square
+    num_2d_tiles = [dim1[1], dim2[1]]
+    for i in 2:length(dim1)
+        n1 = norm([dim1[i], dim2[i]] .- sqrt(n))
+        n2 = norm(num_2d_tiles .- sqrt(n))
+        if n1 < n2
+            num_2d_tiles = [dim1[i], dim2[i]]
+        end
+    end
+    return num_2d_tiles
+end
+
+"""Returns the optimal number of tiles in (i,j,k) given total number of tiles n"""
+function num_3d_tiles1(n)
+    # find all common denominators of the total number of images
+    denoms = denominators(n)
+
+    # find all combinations of common denominators
+    # whose product equals the total number of images
+    dim1 = Vector{Int}(undef, 0)
+    dim2 = Vector{Int}(undef, 0)
+    dim3 = Vector{Int}(undef, 0)
+    for k in 1:length(denoms)
+        for j in 1:length(denoms)
+            for i in 1:length(denoms)
+                if denoms[i] * denoms[j] * denoms[k] == n
+                    push!(dim1, denoms[i])
+                    push!(dim2, denoms[j])
+                    push!(dim3, denoms[k])
+                end
+            end
+        end
+    end
+    # pick the set of common denominators with the minimal norm
+    # between two elements -- rectangle closest to a square
+    num_3d_tiles = [dim1[1], dim2[1], dim3[1]]
+    for i in 2:length(dim1)
+        n1 = norm([dim1[i], dim2[i], dim3[i]] .- sqrt(n))
+        n2 = norm(num_3d_tiles .- sqrt(n))
+        if n1 < n2
+            num_3d_tiles = [dim1[i], dim2[i], dim3[i]]
+        end
+    end
+    return num_3d_tiles
+end
+
+# """
+# Given an input I dimensions of the total computational domain,
+# returns an array of start and end indices [ilo,ihi]
+# """
+# function tile_indices_1d1(dims::Integer, ntiles::Integer, id::Integer)
+#     indices = zeros(Int, 2)
+#     tile_size = dims ÷ ntiles
+
+#     # start and end indices assuming equal tile sizes
+#     indices[1] = (id - 1) * tile_size + 1
+#     indices[2] = indices[1] + tile_size - 1
+
+#     # if we have any remainder, distribute it to the tiles at the end
+#     offset = ntiles - mod(dims, ntiles)
+#     if id > offset
+#         indices[1] = indices[1] + id - offset - 1
+#         indices[2] = indices[2] + id - offset
+#     end
+#     return indices
+# end
+
+# """
+# Given an input (I,J) dimensions of the total computational domain,
+# returns an array of start and end indices [ilo,ihi,jlo,jhi]
+# """
+# function tile_indices_2d(dims, ntiles::Integer, id::Integer)
+#     indices = zeros(Int, 4)
+#     tiles = num_2d_tiles(ntiles)
+#     tiles_ij = tile_id_to_ij(id, ntiles)
+#     indices[1:2] = tile_indices_1d(dims[1], tiles[1], tiles_ij[1])
+#     indices[3:4] = tile_indices_1d(dims[2], tiles[2], tiles_ij[2])
+#     return indices
+# end
+
+# """
+# Given an input (I,J,K) dimensions of the total computational domain,
+# returns an array of start and end indices [ilo,ihi,jlo,jhi,klo,khi]
+# """
+# function tile_indices_3d(dims, ntiles::Integer, id::Integer)
+#     indices = zeros(Int, 6)
+#     tiles = num_3d_tiles(ntiles)
+#     tiles_ij = tile_id_to_ijk(id, ntiles)
+#     indices[1:2] = tile_indices_1d(dims[1], tiles[1], tiles_ij[1])
+#     indices[3:4] = tile_indices_1d(dims[2], tiles[2], tiles_ij[2])
+#     indices[5:6] = tile_indices_1d(dims[3], tiles[3], tiles_ij[3])
+#     return indices
+# end
+
+
+
+function global_to_subdomain_bounds(globalarraysize::NTuple{1,T}, topology::CartesianTopology,p) where {T <: Integer}
+    ilo, ihi = tile_indices_1d1(globalarraysize[1], topology.global_dims[1], topology.coords[1])
+    return (ilo, ihi)
+end
+
+function global_to_subdomain_bounds(globalarraysize::NTuple{2,T}, topology::CartesianTopology,p) where {T <: Integer}
+    # @show globalarraysize 
+    # @show topology.global_dims
+    # @show topology.coords
+
+    topo_coords = MPI.Cart_coords(topology.comm) |> reverse
+    # @show topo_coords, topology.rank
+
+    # @error "adfadsf"
+    ilo, ihi = tile_indices_1d1(globalarraysize[1], topology.global_dims[1], topology.coords[1])
+    jlo, jhi = tile_indices_1d1(globalarraysize[2], topology.global_dims[2], topology.coords[2])
+    # @show (ilo, ihi, jlo, jhi)
+    # MPI.Abort(topology.comm, 10)
+    return (ilo, ihi, jlo, jhi)
+end
+
+function global_to_subdomain_bounds(globalarraysize::NTuple{3,T}, topology::CartesianTopology,p) where {T <: Integer}
+    ilo, ihi = tile_indices_1d1(globalarraysize[1], topology.global_dims[1], topology.coords[1])
+    jlo, jhi = tile_indices_1d1(globalarraysize[2], topology.global_dims[2], topology.coords[2])
+    klo, khi = tile_indices_1d1(globalarraysize[3], topology.global_dims[3], topology.coords[3])
+    return (ilo, ihi, jlo, jhi, klo, khi)
+end
+
+# """Given tile id in a 1D layout, returns the corresponding tile indices in a 2D layout"""
+# function tile_id_to_ij(id::Integer, ntiles::Integer)
+#     if id < 1
+#         @error("Invalid tile id")
+#     end
+#     I, J = num_2d_tiles(ntiles)
+#     CI = CartesianIndices((1:I, 1:J))
+#     ij = Tuple(CI[id])
+#     return ij
+# end
+
+# """Given tile id in a 1D layout, returns the corresponding tile indices in a 3D layout"""
+# function tile_id_to_ijk(id::Integer, ntiles::Integer)
+#     if id < 1
+#         @error("Invalid tile id")
+#     end
+#     I, J, K = num_3d_tiles(ntiles)
+#     CI = CartesianIndices((1:I, 1:J, 1:K))
+#     ijk = Tuple(CI[id])
+#     return ijk
+# end
 
 # end

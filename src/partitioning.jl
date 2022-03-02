@@ -1,146 +1,141 @@
-using LinearAlgebra: norm
+"""
+    split_count(N::Integer, n::Integer)
 
-"""Return all common denominators of n"""
-function denominators(n::Integer)
-    denominators = Vector{Int}(undef, 0)
-    for i in 1:n
-        if mod(n, i) == 0
-            push!(denominators, i)
-        end
-    end
-    return denominators
-end
-
-"""Returns the optimal number of tiles in (i,j) given total number of tiles n"""
-function num_2d_tiles(n)
-    # find all common denominators of the total number of images
-    denoms = denominators(n)
-
-    # find all combinations of common denominators
-    # whose product equals the total number of images
-    dim1 = Vector{Int}(undef, 0)
-    dim2 = Vector{Int}(undef, 0)
-    for j in 1:length(denoms)
-        for i in 1:length(denoms)
-            if denoms[i] * denoms[j] == n
-                push!(dim1, denoms[i])
-                push!(dim2, denoms[j])
-            end
-        end
-    end
-    # pick the set of common denominators with the minimal norm
-    # between two elements -- rectangle closest to a square
-    num_2d_tiles = [dim1[1], dim2[1]]
-    for i in 2:length(dim1)
-        n1 = norm([dim1[i], dim2[i]] .- sqrt(n))
-        n2 = norm(num_2d_tiles .- sqrt(n))
-        if n1 < n2
-            num_2d_tiles = [dim1[i], dim2[i]]
-        end
-    end
-    return num_2d_tiles
-end
-
-"""Returns the optimal number of tiles in (i,j,k) given total number of tiles n"""
-function num_3d_tiles(n)
-    # find all common denominators of the total number of images
-    denoms = denominators(n)
-
-    # find all combinations of common denominators
-    # whose product equals the total number of images
-    dim1 = Vector{Int}(undef, 0)
-    dim2 = Vector{Int}(undef, 0)
-    dim3 = Vector{Int}(undef, 0)
-    for k in 1:length(denoms)
-        for j in 1:length(denoms)
-            for i in 1:length(denoms)
-                if denoms[i] * denoms[j] * denoms[k] == n
-                    push!(dim1, denoms[i])
-                    push!(dim2, denoms[j])
-                    push!(dim3, denoms[k])
-                end
-            end
-        end
-    end
-    # pick the set of common denominators with the minimal norm
-    # between two elements -- rectangle closest to a square
-    num_3d_tiles = [dim1[1], dim2[1], dim3[1]]
-    for i in 2:length(dim1)
-        n1 = norm([dim1[i], dim2[i], dim3[i]] .- sqrt(n))
-        n2 = norm(num_3d_tiles .- sqrt(n))
-        if n1 < n2
-            num_3d_tiles = [dim1[i], dim2[i], dim3[i]]
-        end
-    end
-    return num_3d_tiles
+Return a vector of `n` integers which are approximately equally sized and sum to `N`.
+"""
+function split_count(N::Integer, n::Integer)
+    q,r = divrem(N, n)
+    return [i <= r ? q+1 : q for i = 1:n]
 end
 
 """
-Given an input I dimensions of the total computational domain,
-returns an array of start and end indices [ilo,ihi]
+	get_subdomain_dimension_sizes(A, tile_dims, A_halo_dims)
+
+Get the size along each dimension in `(i,j,k)` of the subdomain, based on a given array `A`. The `tile_dims` is the shape of the global domain, e.g. (4,2) means 4 tiles or subdomains in `i` and 2 in `j`. `A_halo_dims` is the tuple of which dimensions the halo exchanges take place on, e.g. `(2,3)`.
+
+# Example
+```julia
+A = rand(4,200,100); dims=(2,3), tile_dims=(4,2)
+get_subdomain_dimension_sizes(A, tile_dims, dims) # [[i][j]] --> [[50,50,50,50],[100,100]]
+```
 """
-function tile_indices_1d(dims::Integer, ntiles::Integer, id::Integer)
-    indices = zeros(Int, 2)
-    tile_size = dims ÷ ntiles
-
-    # start and end indices assuming equal tile sizes
-    indices[1] = (id - 1) * tile_size + 1
-    indices[2] = indices[1] + tile_size - 1
-
-    # if we have any remainder, distribute it to the tiles at the end
-    offset = ntiles - mod(dims, ntiles)
-    if id > offset
-        indices[1] = indices[1] + id - offset - 1
-        indices[2] = indices[2] + id - offset
-    end
-    return indices
+function get_subdomain_dimension_sizes(A_size, tile_dims, A_halo_dims)
+	tile_sizes = Vector{Vector{Int64}}(undef, 0)
+	new_tile_dims = match_tile_halo_dim_sizes(tile_dims, A_halo_dims)
+	for (nd, nt) in zip(A_halo_dims, new_tile_dims)
+		# sz = split_count(size(A, nd), nt)
+		sz = split_count(A_size[nd], nt)
+		push!(tile_sizes,sz)
+	end
+	tile_sizes
 end
 
 """
-Given an input (I,J) dimensions of the total computational domain,
-returns an array of start and end indices [ilo,ihi,jlo,jhi]
+	match_tile_halo_dim_sizes(tile_dims, halo_dims)
+
+Ensure that the tile dimension tuple is the same length as the halo dim tuple. If not, then pad with ones.
 """
-function tile_indices_2d(dims, ntiles::Integer, id::Integer)
-    indices = zeros(Int, 4)
-    tiles = num_2d_tiles(ntiles)
-    tiles_ij = tile_id_to_ij(id, ntiles)
-    indices[1:2] = tile_indices_1d(dims[1], tiles[1], tiles_ij[1])
-    indices[3:4] = tile_indices_1d(dims[2], tiles[2], tiles_ij[2])
-    return indices
+function match_tile_halo_dim_sizes(tile_dims, halo_dims)
+	new_tile_dims = ones(Int,length(halo_dims))
+	for i in 1:length(tile_dims)
+		new_tile_dims[i] = tile_dims[i]
+	end
+	new_tile_dims |> Tuple
 end
 
-"""
-Given an input (I,J,K) dimensions of the total computational domain,
-returns an array of start and end indices [ilo,ihi,jlo,jhi,klo,khi]
-"""
-function tile_indices_3d(dims, ntiles::Integer, id::Integer)
-    indices = zeros(Int, 6)
-    tiles = num_3d_tiles(ntiles)
-    tiles_ij = tile_id_to_ijk(id, ntiles)
-    indices[1:2] = tile_indices_1d(dims[1], tiles[1], tiles_ij[1])
-    indices[3:4] = tile_indices_1d(dims[2], tiles[2], tiles_ij[2])
-    indices[5:6] = tile_indices_1d(dims[3], tiles[3], tiles_ij[3])
-    return indices
+function get_subdomain_sizes(A_size, tile_dims::NTuple{2,Int}, halo_dims)
+
+	# the array that hold sizes of each subdomain; [size, proc_id]
+	sizes = zeros(Int64, length(halo_dims), prod(tile_dims))
+	
+	sub_sizes = get_subdomain_dimension_sizes(A_size, tile_dims, halo_dims)
+	ranges = [UnitRange(1,length(s)) for s in sub_sizes] |> Tuple
+
+	LI = LinearIndices(ranges)
+	for Idx in CartesianIndices(LI)
+		i, j = Tuple(Idx)
+		I = LI[Idx]
+		
+		sizes[1,I] = sub_sizes[1][i]
+		sizes[2,I] = sub_sizes[2][j]
+	end
+	sizes	
 end
 
-"""Given tile id in a 1D layout, returns the corresponding tile indices in a 2D layout"""
-function tile_id_to_ij(id::Integer, ntiles::Integer)
-    if id < 1
-        @error("Invalid tile id")
-    end
-    I, J = num_2d_tiles(ntiles)
-    CI = CartesianIndices((1:I, 1:J))
-    ij = Tuple(CI[id])
-    return ij
+function get_subdomain_sizes(A_size, tile_dims::NTuple{3,Int}, halo_dims)
+
+	# the array that hold sizes of each subdomain; [[dimi, dimj, etc.], proc_id]
+	sizes = zeros(Int64, length(halo_dims), prod(tile_dims))
+	
+	sub_sizes = get_subdomain_dimension_sizes(A_size, tile_dims, halo_dims)
+	ranges = [UnitRange(1,length(s)) for s in sub_sizes] |> Tuple
+
+	LI = LinearIndices(ranges)
+	for Idx in CartesianIndices(LI)
+		i, j, k = Tuple(Idx)
+		I = LI[Idx]
+		
+		sizes[1,I] = sub_sizes[1][i]
+		sizes[2,I] = sub_sizes[2][j]
+		sizes[3,I] = sub_sizes[3][k]
+	end
+	sizes	
 end
 
-"""Given tile id in a 1D layout, returns the corresponding tile indices in a 3D layout"""
-function tile_id_to_ijk(id::Integer, ntiles::Integer)
-    if id < 1
-        @error("Invalid tile id")
-    end
-    I, J, K = num_3d_tiles(ntiles)
-    CI = CartesianIndices((1:I, 1:J, 1:K))
-    ijk = Tuple(CI[id])
-    return ijk
+function get_istarts_ends(isizes)
+	istarts = similar(isizes)
+	iends = similar(isizes)
+	for i in 1:length(isizes)
+		if i > 1
+			istarts[i] = istarts[i-1] + isizes[i-1]
+			iends[i] = istarts[i] + isizes[i]-1
+		else
+			istarts[i] = 1
+			iends[i] = isizes[i]
+		end
+	end
+	return istarts, iends
+end
+
+function get_subdomain_indices(A_size, domain_size::NTuple{3,Int}, halo_dims)
+
+	ndims = length(domain_size)
+	isizes, jsizes, ksizes = get_subdomain_dimension_sizes(A_size, domain_size, halo_dims)
+	iloihi = get_istarts_ends(isizes)
+	jlojhi = get_istarts_ends(jsizes)
+	klokhi = get_istarts_ends(ksizes)
+	lohi_indices = Vector{NTuple{ndims*2, Int64}}(undef, 0)
+	for k in 1:domain_size[3]
+		for j in 1:domain_size[2]
+			for i in 1:domain_size[1]
+				ilo = iloihi[1][i]
+				ihi = iloihi[2][i]
+				jlo = jlojhi[1][j]
+				jhi = jlojhi[2][j]
+				klo = klokhi[1][k]
+				khi = klokhi[2][k]
+				push!(lohi_indices, (ilo,ihi,jlo,jhi,klo,khi)) 
+			end
+		end
+	end
+	lohi_indices
+end
+
+function get_subdomain_indices(A_size, domain_size::NTuple{2,Int}, halo_dims)
+
+	ndims = length(domain_size)
+	isizes, jsizes = get_subdomain_dimension_sizes(A_size, domain_size, halo_dims)
+	iloihi = get_istarts_ends(isizes)
+	jlojhi = get_istarts_ends(jsizes)
+	lohi_indices = Vector{NTuple{ndims*2, Int64}}(undef, 0)
+	for j in 1:domain_size[2]
+			for i in 1:domain_size[1]
+			ilo = iloihi[1][i]
+			ihi = iloihi[2][i]
+			jlo = jlojhi[1][j]
+			jhi = jlojhi[2][j]
+			push!(lohi_indices, (ilo,ihi,jlo,jhi)) 
+		end
+	end
+	lohi_indices
 end

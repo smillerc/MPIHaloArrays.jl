@@ -1,4 +1,5 @@
 
+
 """
 Helper functions to get the low side halo and domain starting/ending indices
 
@@ -20,10 +21,6 @@ Helper functions to get the low side halo and domain starting/ending indices
     return (lo_halo_start, lo_halo_end, lo_dom_start, lo_dom_end)
 end
 
-@inline function lo_indices(A::MPIHaloArray{T,N}, dim) where {T,N}
-    lo_indices(A.data, dim, A.nhalo)
-end
-
 """Helper functions to get the high side halo and domain starting/ending indices"""
 @inline function hi_indices(field, dim, nhalo)
 
@@ -37,8 +34,4 @@ end
     hi_dom_start = hi_dom_end - nhalo + 1 # start index of the inner domain
 
     return (hi_dom_start, hi_dom_end, hi_halo_start, hi_halo_end)
-end
-
-@inline function hi_indices(A::MPIHaloArray{T,N}, dim) where {T,N}
-    hi_indices(A.data, dim, A.nhalo)
 end
