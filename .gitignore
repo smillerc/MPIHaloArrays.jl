@@ -6,6 +6,7 @@
 /docs/Manifest.toml
 /build/
 .DS_Store
+/docs/examples/*.png
 *~
 *#*
 *#*#
