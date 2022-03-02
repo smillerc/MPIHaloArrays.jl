@@ -5,7 +5,7 @@ using OffsetArrays
 
 include("topology.jl")
 include("partitioning.jl")
-
+include("utils/dataindices.jl")
 # using .ParallelTopologies
 
 export MPIHaloArray
@@ -17,13 +17,7 @@ export updatehalo!
 export scatterglobal, gatherglobal
 export localindices, globalindices
 
-struct DataIndices{T <: Integer}
-    lo_halo::NTuple{2,T}               # (start,end) indices of the halo region on the low side
-    lo_halo_domain_donor::NTuple{2,T}  # (start,end) indices of the domain region on the low side that "donates" to the halo region
-    domain::NTuple{2,T}                # (start,end) indices of the real domain
-    hi_halo_domain_donor::NTuple{2,T}  # (start,end) indices of the domain region on the high side that "donates" to the halo region
-    hi_halo::NTuple{2,T}               # (start,end) indices of the halo region on the high side
-end
+
 
 """
 MPIHaloArray
@@ -48,6 +42,7 @@ mutable struct MPIHaloArray{T,N} <: AbstractArray{T,N}
     # MPIHaloArray{T}(sizes::Vararg{<:Integer,N}, nhalo) where {T,N} = MPIHaloArray(Array{T, 2}(undef, sizes...), nhalo, 0...)
 end
 
+
 include("utils/indexing.jl")
 include("updatehalo.jl")
 include("scattergather.jl")
@@ -69,8 +64,8 @@ function MPIHaloArray(A::AbstractArray{T,N}, topo::CartesianTopology, nhalo::Int
 
     A_with_halo = pad_with_halo(A, nhalo)
 
-    if length(topo.global_dims) > length(size(A))
-        @error "Dimensionality of the ParallelTopology ($(length(topo.global_dims))) > the dimensionality of the array A ($(length(size(A))))"
+    if topo.dimension > length(size(A))
+        @error "Dimensionality of the ParallelTopology ($(topo.dimension)) > the dimensionality of the array A ($(length(size(A))))"
     end
 
     for dim in 1:N
@@ -83,8 +78,8 @@ function MPIHaloArray(A::AbstractArray{T,N}, topo::CartesianTopology, nhalo::Int
                                     (hi_dom_start , hi_dom_end),
                                     (hi_halo_start, hi_halo_end))
         
+        # TODO: this is wrong -- it assumes a constant size
         global_offset = (hi_halo_end - lo_halo_start + 1) * topo.coords[dim]
-
         global_di[dim] = DataIndices((lo_halo_start, lo_halo_end) .+ global_offset, 
                                      (lo_dom_start , lo_dom_end ) .+ global_offset,
                                      (lo_dom_start , hi_dom_end ) .+ global_offset,
@@ -257,6 +252,14 @@ function globalindices(A::MPIHaloArray{T,3}) where {T}
     jlo, jhi = A.global_indices[2].domain
     klo, khi = A.global_indices[3].domain
     return (ilo, ihi, jlo, jhi, klo, khi)
+end
+
+@inline function lo_indices(A::MPIHaloArray{T,N}, dim) where {T,N}
+    lo_indices(A.data, dim, A.nhalo)
+end
+
+@inline function hi_indices(A::MPIHaloArray{T,N}, dim) where {T,N}
+    hi_indices(A.data, dim, A.nhalo)
 end
 
 # include("ops.jl")
