@@ -9,10 +9,10 @@ MPIHaloArrays is a high-level array type to facilitate halo, or ghost-cell excha
 
 ## Installation
 
-The package is registered and can be installed with
+The package can be installed with (soon to be registered)
 
 ```julia
-pkg> add MPIHaloArrays
+pkg> add https://github.com/smillerc/MPIHaloArrays.jl
 ```
 
 ## Documentation
@@ -56,7 +56,6 @@ x[1,1] .= 2.0
 
 # Get the local/global indices of the _domain_ data (not including the halo cells)
 ilo, ihi, jlo, jhi = localindices(x) # -> useful for looping without going into halo regions
-ilo_g, ihi_g, jlo_g, jhi_g = globalindices(x)
 
 # Exchange data with neighbors
 updatehalo!(x)
@@ -86,6 +85,10 @@ A_global_result = gatherglobal(A_local; root=root) # -> returns a Base.Array
 
 
 At the moment, reductions are not implemented, but will be in the future...
+
+## Examples
+
+- [2D Heat Diffusion](docs/examples/04-diffusion2d.jl)
 
 
 [docs-stable-url]: https://smillerc.github.io/MPIHaloArrays.jl/stable
