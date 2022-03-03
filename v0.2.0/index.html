@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>MPIHaloArrays.jl · MPIHaloArrays.jl</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="assets/documenter.js"></script><script src="siteinfo.js"></script><script src="../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-dark.css" data-theme-name="documenter-dark"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href><img src="assets/logo.png" alt="MPIHaloArrays.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit">MPIHaloArrays.jl</span></div><form class="docs-search" action="search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li class="is-active"><a class="tocitem" href>MPIHaloArrays.jl</a><ul class="internal"><li><a class="tocitem" href="#Installation"><span>Installation</span></a></li><li><a class="tocitem" href="#Basic-Usage"><span>Basic Usage</span></a></li></ul></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="examples/01-halo1d/">1D Halo Example</a></li><li><a class="tocitem" href="examples/02-halo2d/">2D Halo Example</a></li><li><a class="tocitem" href="examples/03-halo3d/">3D Halo Example</a></li><li><a class="tocitem" href="examples/04-diffusion2d/">2D Diffusion</a></li></ul></li><li><span class="tocitem">Reference</span><ul><li><a class="tocitem" href="api/">API</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>MPIHaloArrays.jl</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>MPIHaloArrays.jl</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/smillerc/MPIHaloArrays.jl" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="MPIHaloArrays"><a class="docs-heading-anchor" href="#MPIHaloArrays">MPIHaloArrays</a><a id="MPIHaloArrays-1"></a><a class="docs-heading-anchor-permalink" href="#MPIHaloArrays" title="Permalink"></a></h1><p>MPIHaloArrays is a high-level array type to help with halo, or ghost-cell exchanges commonly found in large-scale PDE problems. Very similar in goals and design to <code>MPIArrays.jl</code> and <code>ImplicitGlobalGrid.jl</code>. Domains can be decomposed into 1, 2, or 3D topology. Currently arrays are limited to 1, 2, or 3D.</p><h2 id="Installation"><a class="docs-heading-anchor" href="#Installation">Installation</a><a id="Installation-1"></a><a class="docs-heading-anchor-permalink" href="#Installation" title="Permalink"></a></h2><p>The package is registered and can be installed with</p><pre><code class="language-julia">pkg&gt; add MPIHaloArrays</code></pre><h2 id="Basic-Usage"><a class="docs-heading-anchor" href="#Basic-Usage">Basic Usage</a><a id="Basic-Usage-1"></a><a class="docs-heading-anchor-permalink" href="#Basic-Usage" title="Permalink"></a></h2><p>This example shows how to set up the initial array, fill the halo/domain cells, and do a halo exchange</p><pre><code class="language-julia">using MPI, MPIHaloArrays
+
+MPI.Init()
+rank = MPI.Comm_rank(comm)
+
+# Create the MPI topology
+topo = CartesianTopology([4,4], # use a 4x4 decomposition
+                         [true, true]; # periodic in both dimensions   
+                         do_corners=false) # exchange corner halo regions (significant speed advantage if you don&#39;t need it)
+
+nhalo = 2 # Number of halo cells in each dimension (fixed for all dimensions)
+N = 200
+
+# create the array type; this pads the data on all sides with halo regions
+x = MPIHaloArray(rand(N,N), topo, nhalo)
+
+# fill all the halo regions with -1
+fillhalo!(A, -1)
+
+# fill the domain region with the current rank
+filldomain!(A, rank)
+
+# local (current rank) indexing works just like a normal array
+x[1,1] .= 2.0
+
+# Get the local/global indices of the _domain_ data (not including the halo cells)
+ilo, ihi, jlo, jhi = localindices(x) # -&gt; useful for looping without going into halo regions
+ilo_g, ihi_g, jlo_g, jhi_g = globalindices(x)
+
+# Exchange data with neighbors
+updatehalo!(x)
+
+GC.gc()
+MPI.Finalize()</code></pre><p>Scatter and gather operations are also defined with <code>scatterglobal</code> and <code>gatherglobal</code>.</p><pre><code class="language-julia">rank = 0 # MPI rank to scatter from / gather to
+
+# start with a global Base.Array type to decompose and scatter to each rank
+ni = 512; nj = 256
+A_global = reshape(1:ni*nj, ni, nj);
+
+# scatter - this internally converts A_global to multiple halo arrays. This is why
+#           the nhalo and topology types are needed
+A_local = scatterglobal(A_global, root, nhalo, topology) # -&gt; returns a MPIHaloArray
+
+# do some work...
+
+# and now gather the decomposed domain and store on the root rank of choice
+A_global_result = gatherglobal(A_local; root=root) # -&gt; returns a Base.Array</code></pre><p>At the moment, reductions are not implemented, but will be in the future...</p></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="examples/01-halo1d/">1D Halo Example »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Thursday 3 March 2022 16:10">Thursday 3 March 2022</span>. Using Julia version 1.6.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
