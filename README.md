@@ -52,7 +52,7 @@ fillhalo!(A, -1)
 filldomain!(A, rank)
 
 # local (current rank) indexing works just like a normal array
-x[1,1] .= 2.0
+A[1,1] .= 2.0
 
 # Get the local/global indices of the _domain_ data (not including the halo cells)
 ilo, ihi, jlo, jhi = localindices(x) # -> useful for looping without going into halo regions
@@ -88,8 +88,24 @@ At the moment, reductions are not implemented, but will be in the future...
 
 ## Examples
 
-- [2D Heat Diffusion](docs/examples/04-diffusion2d.jl)
+A slightly more useful example that performs 2D heat diffusion is shown [here](docs/examples/04-diffusion2d.jl). This shows how to
+ - Scatter initial conditions from the root node to each MPI process with `scatterglobal()`
+ - Perform a stencil operation within the current `MPIHaloArray`. This looks like any other normal array loop, but the bounds are determined by the `MPIHaloArray` via `localindices()`
+ - Update halo cells / neighbor information. Periodic boundary conditions are also handled by the `CartesianTopology` type.
+ - Gather results to the root node for plotting/output with `gatherglobal()`
 
+
+## Exported functions/types
+
+- `MPIHaloArray`: An array type that extends `AbstractArray` to provide MPI neighbor communication for halo or ghost cells
+- `AbstractParallelTopology`, `CartesianTopology`: MPI Topology types to manage neighbor information
+- `neighbor(), neighbors()`, `[i,j,k]lo_neighbor()`, `[i,j,k]hi_neighbor()`: Extract neighbors of the current MPI rank
+- `lo_indices()`, `hi_indices()`: Local indices of the current MPIHaloArray. Used for loop limits that ignore halo regions
+- `fillhalo!()`: Fill the halo cells with a scalar value
+- `filldomain!()`: Fill the domain cells with a scalar value
+- `updatehalo!()`: Perform neighbor communication / halo exchange
+- `scatterglobal()`: Distribute/scatter a global array to multiple ranks - returns a local `MPIHaloArray` for each rank
+- `gatherglobal()`: Gather `MPIHaloArray`s to a root MPI rank - returns an `AbstractArray` on the root node
 
 [docs-stable-url]: https://smillerc.github.io/MPIHaloArrays.jl/stable
 [docs-dev-url]: https://smillerc.github.io/MPIHaloArrays.jl/
