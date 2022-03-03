@@ -20,7 +20,7 @@ get_subdomain_dimension_sizes(A, tile_dims, dims) # [[i][j]] --> [[50,50,50,50],
 ```
 """
 function get_subdomain_dimension_sizes(A_size, tile_dims, A_halo_dims)
-	tile_sizes = Vector{Vector{Int64}}(undef, 0)
+	tile_sizes = Vector{Vector{Int}}(undef, 0)
 	new_tile_dims = match_tile_halo_dim_sizes(tile_dims, A_halo_dims)
 	for (nd, nt) in zip(A_halo_dims, new_tile_dims)
 		# sz = split_count(size(A, nd), nt)
@@ -46,7 +46,7 @@ end
 function get_subdomain_sizes(A_size, tile_dims::NTuple{1,Int}, halo_dims)
 
 	# the array that hold sizes of each subdomain; [size, proc_id]
-	sizes = zeros(Int64, length(halo_dims), prod(tile_dims))
+	sizes = zeros(Int, length(halo_dims), prod(tile_dims))
 	
 	sub_sizes = get_subdomain_dimension_sizes(A_size, tile_dims, halo_dims)
 	ranges = [UnitRange(1,length(s)) for s in sub_sizes] |> Tuple
@@ -61,7 +61,7 @@ end
 function get_subdomain_sizes(A_size, tile_dims::NTuple{2,Int}, halo_dims)
 
 	# the array that hold sizes of each subdomain; [size, proc_id]
-	sizes = zeros(Int64, length(halo_dims), prod(tile_dims))
+	sizes = zeros(Int, length(halo_dims), prod(tile_dims))
 	
 	sub_sizes = get_subdomain_dimension_sizes(A_size, tile_dims, halo_dims)
 	ranges = [UnitRange(1,length(s)) for s in sub_sizes] |> Tuple
@@ -80,7 +80,7 @@ end
 function get_subdomain_sizes(A_size, tile_dims::NTuple{3,Int}, halo_dims)
 
 	# the array that hold sizes of each subdomain; [[dimi, dimj, etc.], proc_id]
-	sizes = zeros(Int64, length(halo_dims), prod(tile_dims))
+	sizes = zeros(Int, length(halo_dims), prod(tile_dims))
 	
 	sub_sizes = get_subdomain_dimension_sizes(A_size, tile_dims, halo_dims)
 	ranges = [UnitRange(1,length(s)) for s in sub_sizes] |> Tuple
@@ -119,7 +119,7 @@ function get_subdomain_indices(A_size, domain_size::NTuple{3,Int}, halo_dims)
 	iloihi = get_istarts_ends(isizes)
 	jlojhi = get_istarts_ends(jsizes)
 	klokhi = get_istarts_ends(ksizes)
-	lohi_indices = Vector{NTuple{ndims*2, Int64}}(undef, 0)
+	lohi_indices = Vector{NTuple{ndims*2, Int}}(undef, 0)
 	for k in 1:domain_size[3]
 		for j in 1:domain_size[2]
 			for i in 1:domain_size[1]
@@ -142,7 +142,7 @@ function get_subdomain_indices(A_size, domain_size::NTuple{2,Int}, halo_dims)
 	isizes, jsizes = get_subdomain_dimension_sizes(A_size, domain_size, halo_dims)
 	iloihi = get_istarts_ends(isizes)
 	jlojhi = get_istarts_ends(jsizes)
-	lohi_indices = Vector{NTuple{ndims*2, Int64}}(undef, 0)
+	lohi_indices = Vector{NTuple{ndims*2, Int}}(undef, 0)
 	for j in 1:domain_size[2]
 			for i in 1:domain_size[1]
 			ilo = iloihi[1][i]
@@ -160,7 +160,7 @@ function get_subdomain_indices(A_size, domain_size::NTuple{1,Int}, halo_dims)
 	ndims = length(domain_size)
 	isizes = get_subdomain_dimension_sizes(A_size, domain_size, halo_dims)
 	iloihi = get_istarts_ends(isizes[1])
-	lohi_indices = Vector{NTuple{ndims*2, Int64}}(undef, 0)
+	lohi_indices = Vector{NTuple{ndims*2, Int}}(undef, 0)
 	for i in 1:domain_size[1]
 		ilo = iloihi[1][i]
 		ihi = iloihi[2][i]
