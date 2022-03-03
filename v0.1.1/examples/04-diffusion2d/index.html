@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>2D Diffusion · MPIHaloArrays.jl</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../../"><img src="../../assets/logo.png" alt="MPIHaloArrays.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit">MPIHaloArrays.jl</span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">MPIHaloArrays.jl</a></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../01-halo1d/">1D Halo Example</a></li><li><a class="tocitem" href="../02-halo2d/">2D Halo Example</a></li><li><a class="tocitem" href="../03-halo3d/">3D Halo Example</a></li><li class="is-active"><a class="tocitem" href>2D Diffusion</a></li></ul></li><li><span class="tocitem">Reference</span><ul><li><a class="tocitem" href="../../api/">API</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>2D Diffusion</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>2D Diffusion</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/smillerc/MPIHaloArrays.jl" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="D-Diffusion"><a class="docs-heading-anchor" href="#D-Diffusion">2D Diffusion</a><a id="D-Diffusion-1"></a><a class="docs-heading-anchor-permalink" href="#D-Diffusion" title="Permalink"></a></h1><pre><code class="language-julia"># examples/04-diffusion2d.jl
+using MPI, MPIHaloArrays
+using Plots
+gr()
+
+MPI.Init()
+const comm = MPI.COMM_WORLD
+const rank = MPI.Comm_rank(comm)
+const nprocs = MPI.Comm_size(comm)
+const root = 0 # root rank
+
+&quot;&quot;&quot;Establish the initial conditions, e.g. place a high temp rectangle in the center&quot;&quot;&quot;
+function initialize!(x, y, T_0, T_c)
+    T = zeros(length(x), length(y))
+    fill!(T, T_0)
+
+    dx0 = 0.2 # size of the central region
+    dy0 = 0.3 # size of the central region
+    for j in 1:length(y)
+        for i in 1:length(x)
+            if -dx0 &lt; x[i] &lt; dx0 &amp;&amp; -dy0 &lt; y[j] &lt; dy0
+                T[i, j] = T_c
+            end
+        end
+    end
+    return T
+end
+
+&quot;&quot;&quot;Perform 2D heat diffusion&quot;&quot;&quot;
+function diffusion!(T, T_new, α, dt, dx, dy)
+    ilo, ihi, jlo, jhi = localindices(T)
+    for j in jlo:jhi
+        for i in ilo:ihi
+            T_new[i, j] = T[i, j] + α * dt * ((T[i-1, j] - 2 * T[i, j] + T[i+1, j]) / dx^2 +
+                                              (T[i, j-1] - 2 * T[i, j] + T[i, j+1]) / dy^2)
+        end
+    end
+end
+
+function plot_temp(T, iter; root = 0)
+    T_result = gatherglobal(T; root = root)
+    if rank == root
+        println(&quot;Plotting t$(iter).png&quot;)
+        p1 = contour(T_result, fill = true, color = :viridis, aspect_ratio = :equal)
+        plot(p1)
+        savefig(&quot;t$(iter).png&quot;)
+    end
+end
+
+# ----------------------------------------------------------------
+# Initial conditions
+dx = 0.01; dy = 0.01; # grid spacing
+α = 0.1 # thermal diffusivity
+dt = dx^2 * dy^2 / (2.0 * α * (dx^2 + dy^2)) # stable time step
+
+x = -1:dx:1 |&gt; collect # x grid 
+y = -2:dy:2 |&gt; collect # y grid 
+
+T_0 = 100.0 # initial temperature
+T_c = 200.0 # temperature at the center hot region
+
+# Initialize the temperature field
+T_global = initialize!(x, y, T_0, T_c)
+
+# ----------------------------------------------------------------
+# Parallel topology construction
+nhalo = 1 # only a stencil of 5 cells is needed, so 1 halo cell is sufficient
+@assert nprocs == 4 &quot;This example is designed with 4 processes, 
+but can be changed in the topology construction...&quot;
+topology = CartesianTopology(comm, [2,2], [true, true]) # periodic boundary conditions
+
+# ----------------------------------------------------------------
+# Plot initial conditions
+if rank == root
+    println(&quot;Plotting initial conditions&quot;)
+    p1 = contour(T_global, fill = true, color = :viridis, aspect_ratio = :equal)
+    plot(p1)
+    savefig(&quot;t0.png&quot;)
+end
+
+# ----------------------------------------------------------------
+# Distribute the work to each process, e.g. domain decomposition
+Tⁿ = scatterglobal(T_global, root, nhalo, topology; 
+                   do_corners = false) # the 5-cell stencil doesn&#39;t use corner info, 
+                                       # so this saves communication time
+Tⁿ⁺¹ = deepcopy(Tⁿ) # T at the next timestep
+
+niter = 500
+plot_interval = 50
+info_interval = 10
+
+plot_temp(Tⁿ, 0) # Plot initial conditions
+
+# Time loop
+for iter in 1:niter
+    if rank == root &amp;&amp; iter % info_interval == 0 println(&quot;Iteration: $iter&quot;) end
+    if iter % plot_interval == 0 plot_temp(Tⁿ, iter) end
+
+    updatehalo!(Tⁿ)
+    diffusion!(Tⁿ, Tⁿ⁺¹, α, dt, dx, dy)
+    Tⁿ.data .= Tⁿ⁺¹.data # update the next time-step
+end
+
+GC.gc()
+MPI.Finalize()</code></pre><pre><code class="language-none">&gt; mpiexecjl -n 4 julia examples/04-diffusion2d.jl
+Plotting initial conditions
+Plotting t0.png
+Iteration: 10
+Iteration: 20
+Iteration: 30
+Iteration: 40
+Iteration: 50
+Plotting t50.png
+Iteration: 60
+Iteration: 70
+Iteration: 80
+Iteration: 90
+Iteration: 100
+Plotting t100.png
+Iteration: 110
+Iteration: 120
+Iteration: 130
+Iteration: 140
+Iteration: 150
+Plotting t150.png
+Iteration: 160
+Iteration: 170
+Iteration: 180
+Iteration: 190
+Iteration: 200
+Plotting t200.png
+Iteration: 210
+Iteration: 220
+Iteration: 230
+Iteration: 240
+Iteration: 250
+Plotting t250.png
+Iteration: 260
+Iteration: 270
+Iteration: 280
+Iteration: 290
+Iteration: 300
+Plotting t300.png
+Iteration: 310
+Iteration: 320
+Iteration: 330
+Iteration: 340
+Iteration: 350
+Plotting t350.png
+Iteration: 360
+Iteration: 370
+Iteration: 380
+Iteration: 390
+Iteration: 400
+Plotting t400.png
+Iteration: 410
+Iteration: 420
+Iteration: 430
+Iteration: 440
+Iteration: 450
+Plotting t450.png
+Iteration: 460
+Iteration: 470
+Iteration: 480
+Iteration: 490
+Iteration: 500
+Plotting t500.png</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../03-halo3d/">« 3D Halo Example</a><a class="docs-footer-nextpage" href="../../api/">API »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Thursday 3 March 2022 14:56">Thursday 3 March 2022</span>. Using Julia version 1.6.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
