@@ -10,7 +10,7 @@ This returns a `MPIHaloArray`
  - `nhalo`: Number of halo cells to create
  - `halo_dims`: Tuple of the dimensions that halo exchanges occur on (not fully working yet)
 """
-function scatterglobal(A::AbstractArray{T, 1}, root::Int, nhalo::Int, topology::ParallelTopology; halo_dims = (1), do_corners = true, com_model = :p2p) where {T}
+function scatterglobal(A::AbstractArray{T, 1}, root::Int, nhalo::Int, topology::AbstractParallelTopology; halo_dims = (1), do_corners = true, com_model = :p2p) where {T}
 
     if A isa Base.UnitRange A = collect(A) end
 
@@ -49,7 +49,7 @@ function scatterglobal(A::AbstractArray{T, 1}, root::Int, nhalo::Int, topology::
     return MPIHaloArray(A_local, topology, nhalo; do_corners = do_corners, com_model = com_model)
 end
 
-function scatterglobal(A::AbstractArray{T, 2}, root::Int, nhalo::Int, topology::ParallelTopology; halo_dims = (1,2), do_corners = true, com_model = :p2p) where {T}
+function scatterglobal(A::AbstractArray{T, 2}, root::Int, nhalo::Int, topology::AbstractParallelTopology; halo_dims = (1,2), do_corners = true, com_model = :p2p) where {T}
 
     if A isa Base.ReshapedArray A = collect(A) end
 
@@ -88,7 +88,7 @@ function scatterglobal(A::AbstractArray{T, 2}, root::Int, nhalo::Int, topology::
     return MPIHaloArray(A_local, topology, nhalo; do_corners = do_corners, com_model = com_model)
 end
 
-function scatterglobal(A::AbstractArray{T, 3}, root::Int, nhalo::Int, topology::ParallelTopology; halo_dims = (1,2,3), do_corners = true, com_model = :p2p) where {T}
+function scatterglobal(A::AbstractArray{T, 3}, root::Int, nhalo::Int, topology::AbstractParallelTopology; halo_dims = (1,2,3), do_corners = true, com_model = :p2p) where {T}
 
     if A isa Base.ReshapedArray A = collect(A) end
 

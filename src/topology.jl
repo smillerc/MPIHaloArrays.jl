@@ -4,11 +4,11 @@ using MPI
 using OffsetArrays
 using LinearAlgebra: norm
 
-# export ParallelTopology, CartesianTopology
+# export AbstractParallelTopology, CartesianTopology
 # export ilo_neighbor, ihi_neighbor, jlo_neighbor, jhi_neighbor, klo_neighbor, khi_neighbor, neighbor, neighbors
 
-"""An abstract ParallelTopology type that is extended by either a CartesianTopology or GraphTopology (future)"""
-abstract type ParallelTopology end
+"""An abstract AbstractParallelTopology type that is extended by either a CartesianTopology or GraphTopology (future)"""
+abstract type AbstractParallelTopology end
 
 global const I = 0
 global const J = 0
@@ -35,7 +35,7 @@ The CartesianTopology type holds neighbor information, current rank, etc.
  - `isperiodic`: Vector{Bool}; Perodicity of each dimension, i.e. `(false, true, true)` means y and z are periodic
  - `neighbors`: OffsetArray{Int}; Neighbor ranks (including corners), indexed as `[[ilo, center, ihi], i, j, k]`
 """
-struct CartesianTopology <: ParallelTopology
+struct CartesianTopology <: AbstractParallelTopology
     comm::MPI.Comm
     nprocs::Int
     rank::Int
@@ -257,8 +257,8 @@ function coord_to_rank(comm, dims, periods, coords)
     rank
 end
 
-function Base.show(io::IO, p::ParallelTopology)
-    println(io, "ParallelTopology")
+function Base.show(io::IO, p::AbstractParallelTopology)
+    println(io, "AbstractParallelTopology")
     println(io, "rank $(p.rank) of $(p.nprocs)")
     println(io, "coords:", p.coords)
     println(io, "global_dims:", p.global_dims)

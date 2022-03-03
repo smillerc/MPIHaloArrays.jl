@@ -9,7 +9,7 @@ include("utils/dataindices.jl")
 # using .ParallelTopologies
 
 export MPIHaloArray
-export ParallelTopology, CartesianTopology
+export AbstractParallelTopology, CartesianTopology
 export neighbor, neighbors
 export ilo_neighbor, ihi_neighbor, jlo_neighbor, jhi_neighbor, klo_neighbor, khi_neighbor
 export lo_indices, hi_indices, fillhalo!, filldomain!
@@ -65,7 +65,7 @@ function MPIHaloArray(A::AbstractArray{T,N}, topo::CartesianTopology, nhalo::Int
     A_with_halo = pad_with_halo(A, nhalo)
 
     if topo.dimension > length(size(A))
-        @error "Dimensionality of the ParallelTopology ($(topo.dimension)) > the dimensionality of the array A ($(length(size(A))))"
+        @error "Dimensionality of the AbstractParallelTopology ($(topo.dimension)) > the dimensionality of the array A ($(length(size(A))))"
     end
 
     for dim in 1:N
