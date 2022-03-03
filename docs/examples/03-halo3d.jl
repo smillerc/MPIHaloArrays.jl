@@ -7,7 +7,7 @@ const nprocs = MPI.Comm_size(comm)
 
 @assert nprocs == 8 "This example is designed with 8 processes..."
 
-topology = CartesianTopology([2,2,2], [false,false,false])
+topology = CartesianTopology(comm, [2,2,2], [false,false,false])
 
 nhalo = 2
 ni = 8

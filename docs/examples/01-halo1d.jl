@@ -16,7 +16,7 @@ function print_haloarray(A)
     end
 end
 
-topology = CartesianTopology(8, false)
+topology = CartesianTopology(comm, 8, false)
 
 nhalo = 2
 ni = 8

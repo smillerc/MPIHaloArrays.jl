@@ -6,6 +6,7 @@ MPI.Init()
 const comm = MPI.COMM_WORLD
 const rank = MPI.Comm_rank(comm)
 const nprocs = MPI.Comm_size(comm)
+const root = 0 # root rank
 
 """Establish the initial conditions, e.g. place a high temp rectangle in the center"""
 function initialize!(x, y, T_0, T_c)
@@ -45,9 +46,9 @@ function plot_temp(T, iter; root = 0)
     end
 end
 
-root = 0 # root rank
-dx = 0.01;
-dy = 0.01; # grid spacing
+# ----------------------------------------------------------------
+# Initial conditions
+dx = 0.01; dy = 0.01; # grid spacing
 α = 0.1 # thermal diffusivity
 dt = dx^2 * dy^2 / (2.0 * α * (dx^2 + dy^2)) # stable time step
 
@@ -60,6 +61,15 @@ T_c = 200.0 # temperature at the center hot region
 # Initialize the temperature field
 T_global = initialize!(x, y, T_0, T_c)
 
+# ----------------------------------------------------------------
+# Parallel topology construction
+nhalo = 1 # only a stencil of 5 cells is needed, so 1 halo cell is sufficient
+@assert nprocs == 4 "This example is designed with 4 processes, 
+but can be changed in the topology construction..."
+topology = CartesianTopology(comm, [2,2], [true, true]) # periodic boundary conditions
+
+# ----------------------------------------------------------------
+# Plot initial conditions
 if rank == root
     println("Plotting initial conditions")
     p1 = contour(T_global, fill = true, color = :viridis, aspect_ratio = :equal)
@@ -67,33 +77,27 @@ if rank == root
     savefig("t0.png")
 end
 
-@assert nprocs == 4 "This example is designed with 4 processes, but can be changed in the topology construction..."
-topology = CartesianTopology(comm, [2, 2], [true, true]) # periodic boundary conditions
-
-nhalo = 1
-Tⁿ = scatterglobal(T_global, root, nhalo, topology; do_corners = false)
-Tⁿ⁺¹ = deepcopy(Tⁿ)
-updatehalo!(Tⁿ)
-
-plot_temp(Tⁿ, 0)
+# ----------------------------------------------------------------
+# Distribute the work to each process, e.g. domain decomposition
+Tⁿ = scatterglobal(T_global, root, nhalo, topology; 
+                   do_corners = false) # the 5-cell stencil doesn't use corner info, 
+                                       # so this saves communication time
+Tⁿ⁺¹ = deepcopy(Tⁿ) # T at the next timestep
 
 niter = 500
 plot_interval = 50
+info_interval = 10
 
-ilo, ihi, jlo, jhi = localindices(Tⁿ)
+plot_temp(Tⁿ, 0) # Plot initial conditions
 
+# Time loop
 for iter in 1:niter
-    if rank == root
-        println("Iteration: $iter")
-    end
+    if rank == root && iter % info_interval == 0 println("Iteration: $iter") end
+    if iter % plot_interval == 0 plot_temp(Tⁿ, iter) end
 
     updatehalo!(Tⁿ)
     diffusion!(Tⁿ, Tⁿ⁺¹, α, dt, dx, dy)
     Tⁿ.data .= Tⁿ⁺¹.data # update the next time-step
-
-    if iter % plot_interval == 0
-        plot_temp(Tⁿ, iter)
-    end
 end
 
 GC.gc()

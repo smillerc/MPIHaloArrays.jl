@@ -1,8 +1,8 @@
-# ParallelTopology
+# AbstractParallelTopology
 
 Parallel topology sets up the neighbors
 
 ```@docs
-MPIHaloArrays.ParallelTopology
+MPIHaloArrays.AbstractParallelTopology
 MPIHaloArrays.CartesianTopology
 ```
