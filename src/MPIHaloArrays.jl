@@ -6,18 +6,16 @@ using OffsetArrays
 include("topology.jl")
 include("partitioning.jl")
 include("utils/dataindices.jl")
-# using .ParallelTopologies
 
 export MPIHaloArray
 export AbstractParallelTopology, CartesianTopology
 export neighbor, neighbors
 export ilo_neighbor, ihi_neighbor, jlo_neighbor, jhi_neighbor, klo_neighbor, khi_neighbor
 export lo_indices, hi_indices, fillhalo!, filldomain!
-export updatehalo!
+export updatehalo!, domainview
 export scatterglobal, gatherglobal
 export localindices, globalindices
-
-
+export globalmin, globalmax, globalsum
 
 """
 MPIHaloArray
@@ -46,6 +44,7 @@ end
 include("utils/indexing.jl")
 include("updatehalo.jl")
 include("scattergather.jl")
+include("ops.jl")
 
 """MPIHaloArray constructor
 
@@ -197,25 +196,18 @@ function fillhalo!(A::MPIHaloArray{T,3}, fillval) where {T}
     fill!(khiA, fillval)
 end
 
-function filldomain!(A::MPIHaloArray{T,1}, fillval) where {T}
-    ilo, ihi  = A.local_indices[1].domain
-    domA = @view A.data[ilo:ihi]
-    fill!(domA, fillval)
+function filldomain!(A::MPIHaloArray, fillval)
+    domain = domainview(A)
+    fill!(domain, fillval)
 end
 
-function filldomain!(A::MPIHaloArray{T,2}, fillval) where {T}
-    ilo, ihi  = A.local_indices[1].domain
-    jlo, jhi  = A.local_indices[2].domain
-    domA = @view A.data[ilo:ihi, jlo:jhi]
-    fill!(domA, fillval)
-end
-
-function filldomain!(A::MPIHaloArray{T,3}, fillval) where {T}
-    ilo, ihi  = A.local_indices[1].domain
-    jlo, jhi  = A.local_indices[2].domain
-    klo, khi  = A.local_indices[3].domain
-    domA = @view A.data[ilo:ihi, jlo:jhi, klo:khi]
-    fill!(domA, fillval)
+"""Return a `view` of the domain data within the `A::MPIHaloArray`"""
+function domainview(A::MPIHaloArray)
+    li = localindices(A)
+    lo = li[1:2:end] # low indicies
+    hi = li[2:2:end] # high indices
+    viewranges = [UnitRange(l,h) for (l,h) in zip(lo, hi)] |> Tuple
+    view(A.data, viewranges...)
 end
 
 function localindices(A::MPIHaloArray{T,1}) where {T}

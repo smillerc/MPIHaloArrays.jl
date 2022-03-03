@@ -16,6 +16,7 @@ mpi_testfiles = [
     ("test_topology_3d.jl", 16),
     ("test_mpihaloarray.jl", 8),
     ("test_scattergather.jl", 8),
+    ("test_minmaxsum.jl", 8),
     ]
 
 if length(mpi_testfiles) > 0
