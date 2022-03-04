@@ -9,10 +9,10 @@ MPIHaloArrays is a high-level array type to facilitate halo, or ghost-cell excha
 
 ## Installation
 
-The package can be installed with (soon to be registered)
+The package can be installed with
 
 ```julia
-pkg> add https://github.com/smillerc/MPIHaloArrays.jl
+pkg> add MPIHaloArrays
 ```
 
 ## Documentation
