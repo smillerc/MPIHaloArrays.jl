@@ -70,7 +70,7 @@ MPI.Finalize()
 Scatter and gather operations are also defined with `scatterglobal` and `gatherglobal`.
 
 ```julia
-rank = 0 # MPI rank to scatter from / gather to
+root = 0 # MPI rank to scatter from / gather to
 
 # start with a global Base.Array type to decompose and scatter to each rank
 ni = 512; nj = 256
