@@ -36,10 +36,13 @@ Halo exchanges can be done in multiple dimensions. At the moment, `MPIHaloArrays
 using MPI, MPIHaloArrays
 
 MPI.Init()
-rank = MPI.Comm_rank(comm)
+const comm = MPI.COMM_WORLD
+const rank = MPI.Comm_rank(comm)
+const nprocs = MPI.Comm_size(comm)
+const root = 0
 
 # Create the MPI topology
-topo = CartesianTopology([4,4], # use a 4x4 decomposition
+topo = CartesianTopology(comm, [4,4], # use a 4x4 decomposition
                          [true, true]) # periodic in both dimensions   
 
 nhalo = 2 # Number of halo cells in each dimension (fixed for all dimensions)
