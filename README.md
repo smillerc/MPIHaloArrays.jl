@@ -5,7 +5,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-success.svg)](https://opensource.org/licenses/MIT)
 
 
-MPIHaloArrays is a high-level array type to facilitate halo, or ghost-cell exchanges commonly found in large-scale PDE codes. Inspiration was taken from [`MPIArrays.jl`](https://github.com/barche/MPIArrays.jl) and [`ImplicitGlobalGrid.jl`](https://github.com/eth-cscs/ImplicitGlobalGrid.jl). Domains can be decomposed into 1, 2, or 3D parallel topologies. 
+MPIHaloArrays is a high-level array type to facilitate halo, or ghost-cell exchanges commonly found in large-scale PDE codes. `MPIHaloArray`s are a subtype of `AbstractArray`s, so the intent is for it to add drop-in capability and combination with other 
+
+Inspiration was taken from [`MPIArrays.jl`](https://github.com/barche/MPIArrays.jl) and [`ImplicitGlobalGrid.jl`](https://github.com/eth-cscs/ImplicitGlobalGrid.jl). Domains can be decomposed into 1, 2, or 3D parallel topologies. 
 
 ## Installation
 
@@ -83,8 +85,22 @@ A_local = scatterglobal(A_global, root, nhalo, topology) # -> returns a MPIHaloA
 A_global_result = gatherglobal(A_local; root=root) # -> returns a Base.Array
 ```
 
+## Interoperability
 
-At the moment, reductions are not implemented, but will be in the future...
+Add physical units via `Unitful.jl`
+```
+using MPIHaloArrays, Unitful
+data = rand(10,10) * u"m"
+A = MPIHaloArray(data, topology, 2)
+```
+
+Add uncertainty via `Measurements.jl`
+```
+using MPIHaloArrays, Unitful, Measurements
+data = (rand(10,10) .± 0.1) * u"m"
+A = MPIHaloArray(data, topology, 2)
+```
+
 
 ## Examples
 
