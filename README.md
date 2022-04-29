@@ -3,6 +3,9 @@
 [![](https://img.shields.io/badge/docs-stable-blue.svg)](https://smillerc.github.io/MPIHaloArrays.jl/stable)
 [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://smillerc.github.io/MPIHaloArrays.jl/dev)
 [![License: MIT](https://img.shields.io/badge/License-MIT-success.svg)](https://opensource.org/licenses/MIT)
+[![Downloads](https://shields.io/endpoint?url=https://pkgs.genieframework.com/api/v1/badge/MPIHaloArrays)](https://pkgs.genieframework.com?packages=MPIHaloArrays).
+
+
 
 
 MPIHaloArrays is a high-level array type to facilitate halo, or ghost-cell exchanges commonly found in large-scale PDE codes. `MPIHaloArray`s are a subtype of `AbstractArray`s, so the intent is for it to add drop-in capability and combination with other 
@@ -11,10 +14,10 @@ Inspiration was taken from [`MPIArrays.jl`](https://github.com/barche/MPIArrays.
 
 ## Installation
 
-The package can be installed with (soon to be registered)
+The package can be installed with
 
 ```julia
-pkg> add https://github.com/smillerc/MPIHaloArrays.jl
+pkg> add MPIHaloArrays
 ```
 
 ## Documentation
@@ -35,10 +38,13 @@ Halo exchanges can be done in multiple dimensions. At the moment, `MPIHaloArrays
 using MPI, MPIHaloArrays
 
 MPI.Init()
-rank = MPI.Comm_rank(comm)
+const comm = MPI.COMM_WORLD
+const rank = MPI.Comm_rank(comm)
+const nprocs = MPI.Comm_size(comm)
+const root = 0
 
 # Create the MPI topology
-topo = CartesianTopology([4,4], # use a 4x4 decomposition
+topo = CartesianTopology(comm, [4,4], # use a 4x4 decomposition
                          [true, true]) # periodic in both dimensions   
 
 nhalo = 2 # Number of halo cells in each dimension (fixed for all dimensions)
@@ -69,7 +75,7 @@ MPI.Finalize()
 Scatter and gather operations are also defined with `scatterglobal` and `gatherglobal`.
 
 ```julia
-rank = 0 # MPI rank to scatter from / gather to
+root = 0 # MPI rank to scatter from / gather to
 
 # start with a global Base.Array type to decompose and scatter to each rank
 ni = 512; nj = 256
