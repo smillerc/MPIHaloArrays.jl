@@ -11,7 +11,9 @@ end
 """
 	get_subdomain_dimension_sizes(A, tile_dims, A_halo_dims)
 
-Get the size along each dimension in `(i,j,k)` of the subdomain, based on a given array `A`. The `tile_dims` is the shape of the global domain, e.g. (4,2) means 4 tiles or subdomains in `i` and 2 in `j`. `A_halo_dims` is the tuple of which dimensions the halo exchanges take place on, e.g. `(2,3)`.
+Get the size along each dimension in `(i,j,k)` of the subdomain, based on a given array `A`. 
+The `tile_dims` is the shape of the global domain, e.g., (4,2) means 4 tiles or subdomains in 
+`i` and 2 in `j`. `A_halo_dims` is the tuple of which dimensions the halo exchanges take place on, e.g. `(2,3)`.
 
 # Example
 ```julia
@@ -23,7 +25,6 @@ function get_subdomain_dimension_sizes(A_size, tile_dims, A_halo_dims)
 	tile_sizes = Vector{Vector{Int}}(undef, 0)
 	new_tile_dims = match_tile_halo_dim_sizes(tile_dims, A_halo_dims)
 	for (nd, nt) in zip(A_halo_dims, new_tile_dims)
-		# sz = split_count(size(A, nd), nt)
 		sz = split_count(A_size[nd], nt)
 		push!(tile_sizes,sz)
 	end
@@ -43,6 +44,9 @@ function match_tile_halo_dim_sizes(tile_dims, halo_dims)
 	new_tile_dims |> Tuple
 end
 
+"""
+Get the size of each subdomain given the tile dimensions and number of halo cells
+"""
 function get_subdomain_sizes(A_size, tile_dims::NTuple{1,Int}, halo_dims)
 
 	# the array that hold sizes of each subdomain; [size, proc_id]
@@ -97,6 +101,10 @@ function get_subdomain_sizes(A_size, tile_dims::NTuple{3,Int}, halo_dims)
 	sizes	
 end
 
+"""
+Get the starting and ending indices based on the size of each subdomain. These are
+the global ilo/ihi values.
+"""
 function get_istarts_ends(isizes)
 	istarts = similar(isizes)
 	iends = similar(isizes)
@@ -112,6 +120,9 @@ function get_istarts_ends(isizes)
 	return istarts, iends
 end
 
+"""
+Get the global indices for each subdomain. This is the tuple of lo and hi indices for each dimension
+"""
 function get_subdomain_indices(A_size, domain_size::NTuple{3,Int}, halo_dims)
 
 	ndims = length(domain_size)
