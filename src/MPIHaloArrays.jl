@@ -254,17 +254,4 @@ end
     hi_indices(A.data, dim, A.nhalo)
 end
 
-# include("ops.jl")
-
-# """
-#     applylocalfunc(f, A::MPIHaloArray)
-# Execute the function f on the part of a owned by the current rank. It is assumed f does not modify the local part.
-# """
-# function applylocalfunc(f, A::MPIHaloArray)
-#     MPI.Win_lock(MPI.LOCK_SHARED, A.rank, 0, A.window)
-#     result = f(A.data)
-#     MPI.Win_unlock(A.rank, A.window)
-#     return result
-# end
-
 end
