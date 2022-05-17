@@ -8,7 +8,7 @@
 
 
 
-MPIHaloArrays provides a high-level array type to facilitate halo, or ghost-cell exchanges commonly found in large-scale PDE codes. `MPIHaloArray`s are a subtype of `AbstractArray`s, so the intent is for it to add drop-in capability and combination with other 
+MPIHaloArrays provides a high-level array type to facilitate halo, or ghost-cell exchanges commonly found in large-scale PDE codes. The `MPIHaloArray` type is a subtype of `AbstractArray`.
 
 Inspiration was taken from [`MPIArrays.jl`](https://github.com/barche/MPIArrays.jl) and [`ImplicitGlobalGrid.jl`](https://github.com/eth-cscs/ImplicitGlobalGrid.jl). Domains can be decomposed into 1, 2, or 3D parallel topologies. 
 
