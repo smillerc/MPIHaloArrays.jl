@@ -47,6 +47,7 @@ struct CartesianTopology <: AbstractParallelTopology
 end
 
 Base.size(C::CartesianTopology) = C.global_dims[1:C.dimension]
+
 #    Neighbor index convention (using offset arrays for index simplicity)
 #    An index of (0,0,1) will give the neighbor in the k+1 direction, (-1,0,-1) is in the i-1, j, k-1 direction
 #
@@ -62,17 +63,17 @@ Base.size(C::CartesianTopology) = C.global_dims[1:C.dimension]
 #          /       /       /       /    |
 #        +-------+-------+-------+      |
 #      /       /       /       /  |     +
-#    /       /       /       /    |   / | 
+#    /       /       /       /    |   / |
 #   +-------+-------+-------+     | /   |
 #   |       |       |       |     +     |
 #   |       |       |       |   / |     +
-#   |       |       |       | /   |   / | 
+#   |       |       |       | /   |   / |
 #   +-------+-------+-------+     | /   |
 #   |       |       |       |     +     |
 #   |       |       |       |   / |     +
-#   |       |       |       | /   |   / 
-#   +-------+-------+-------+     | /   
-#   |       |       |       |     + 
+#   |       |       |       | /   |   /
+#   +-------+-------+-------+     | /
+#   |       |       |       |     +
 #   |       |       |       |   /
 #   |       |       |       | /
 #   +-------+-------+-------+
@@ -80,20 +81,25 @@ Base.size(C::CartesianTopology) = C.global_dims[1:C.dimension]
 
 
 """
+    CartesianTopology(comm::MPI.Comm, dims, periodicity; canreorder = false)
+
 Create a CartesianTopology type that holds neighbor information, current rank, etc.
 
 # Arguments
- - `dims`: Dimensions of the domain in each direction, e.g. [4,3] means a total of 12 procs, with 4 in x and 3 in y
- - `periodicity`: Vector of bools to set if the domain is periodic along a specific dimension
+ - `dims`: Vector or Tuple setting the dimensions of the domain in each direction, e.g. (4,3) means a total of 12 procs, with 4 in x and 3 in y
+ - `periodicity`: Vector or Tuple of bools to set if the domain is periodic along a specific dimension
 
 # Example
 ```julia
 
 # Create a topology of 4x4 with periodic boundaries in both directions
-P = CartesianTopology([4,4], [true, true])
+P = CartesianTopology((4,4), (true, true))
 ```
 """
-function CartesianTopology(comm::MPI.Comm, dims::Vector{Int}, periodicity::Vector{Bool}; canreorder = false)
+function CartesianTopology(comm::MPI.Comm, dims, periodicity; canreorder = false)
+    dims = collect(dims)
+    periodicity = collect(periodicity)
+    
     # comm = MPI.COMM_WORLD
     rank = MPI.Comm_rank(comm)
     nprocs = MPI.Comm_size(comm)
@@ -118,7 +124,7 @@ function CartesianTopology(comm::MPI.Comm, dims::Vector{Int}, periodicity::Vecto
     # MPI convention is (k, j, i), or (z, y, x) which is annoying
     if topo_dim == 1
         ilo, ihi = MPI.Cart_shift(comm_cart, 0, 1)
-        
+
         neighbors[:,  0, 0] = [ilo, rank, ihi]
 
     elseif topo_dim == 2
@@ -200,8 +206,11 @@ function CartesianTopology(comm::MPI.Comm, dims::Int, periodicity::Bool; canreor
     CartesianTopology(comm, [dims], [periodicity]; canreorder = canreorder)
 end
 
-"""Create CartesianTopology only with the vector of boundary periodicity given. 
-This finds the optimal sub-domain ordering for the user.
+"""
+    CartesianTopology(comm::MPI.Comm, periodicity::Vector{Bool}; canreorder = false)
+
+Create CartesianTopology only with the vector of boundary periodicity given. This finds the
+optimal sub-domain ordering for the user.
 """
 function CartesianTopology(comm::MPI.Comm, periodicity::Vector{Bool}; canreorder = false)
     nprocs = MPI.Comm_size(comm)
@@ -292,11 +301,12 @@ khi_neighbor(p::CartesianTopology) = p.neighbors[ 0, 0, 1]
 """
     neighbor(p::CartesianTopology, i_offset::Int, j_offset::Int, k_offset::Int)
 
-Find the neighbor rank based on the offesets in (i,j,k).
-This follows the traditional array index convention rather than MPI's version, so an `i_offset=1` will shift up in the array indexing.
+Find the neighbor rank based on the offesets in `(i,j,k)`. This follows the traditional
+array index convention rather than MPI's version, so an `i_offset=1` will shift up in
+the array indexing.
 
 # Arguments
- - `p` : CartesianTopology type
+ - `p`: CartesianTopology type
  - `i_offset`: Offset in the `i` direction
  - `j_offset`: Offset in the `j` direction
  - `k_offset`: Offset in the `k` direction
@@ -304,7 +314,7 @@ This follows the traditional array index convention rather than MPI's version, s
 # Example:
 ```julia
 # Makes a 4x4 domain with periodic boundaries in both dimensions
-P = CartesianTopology([4,4], [true, true])
+P = CartesianTopology((4,4), (true, true))
 
 # Find the ihi neighbor
 ihi = neighbor(P,+1,0,0)
@@ -462,7 +472,7 @@ function global_to_subdomain_bounds(globalarraysize::NTuple{1,T}, topology::Cart
 end
 
 function global_to_subdomain_bounds(globalarraysize::NTuple{2,T}, topology::CartesianTopology,p) where {T <: Integer}
-    # @show globalarraysize 
+    # @show globalarraysize
     # @show topology.global_dims
     # @show topology.coords
 
