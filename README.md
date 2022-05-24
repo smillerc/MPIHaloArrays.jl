@@ -91,17 +91,49 @@ A_local = scatterglobal(A_global, root, nhalo, topology) # -> returns a MPIHaloA
 A_global_result = gatherglobal(A_local; root=root) # -> returns a Base.Array
 ```
 
+## Setting the halo exchange dimensions
+
+In some cases, you may want a multi-dimensional array that only does the halo exchange on a subset of the dimensions. For example, an array `U`, has dimensions `[[ρ, u, v, p], i, j]`, where `[i,j]` represent 2D grid coordinates and `[ρ, u, v, p]` are the density, x/y velocity, and pressure at each `[i,j]` coordinate. This can be done with the following syntax:
+
+```julia
+using MPI, MPIHaloArrays
+
+MPI.Init()
+const comm = MPI.COMM_WORLD
+const rank = MPI.Comm_rank(comm)
+const nprocs = MPI.Comm_size(comm)
+const root = 0
+
+U = zeros(4,128,128)
+
+# Only 1 MPI rank, but the topology is 2D
+topo = CartesianTopology(comm, (1,1), (true,true))
+
+nhalo = 2
+halo_dims = (2,3)
+A = MPIHaloArray(U, topo, nhalo, halo_dims)
+
+# This will fail b/c U is 3D and the topology is only 2D; you must
+# specify the halo exchange in 2D
+A = MPIHaloArray(U, topo, nhalo) # -> ERROR: Mismatched topology dimensionality (2D) and halo region dimensions (3D)
+
+
+```
+
+**Note:** The default behavior selects __all__ dimensions to exchange halo data. You must provide the `halo_dims` tuple to override this.
+
+
 ## Interoperability
 
 Add physical units via `Unitful.jl`
-```
+```julia
 using MPIHaloArrays, Unitful
 data = rand(10,10) * u"m"
 A = MPIHaloArray(data, topology, 2)
 ```
 
 Add uncertainty via `Measurements.jl`
-```
+```julia
 using MPIHaloArrays, Unitful, Measurements
 data = (rand(10,10) .± 0.1) * u"m"
 A = MPIHaloArray(data, topology, 2)
