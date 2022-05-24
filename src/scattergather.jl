@@ -10,23 +10,25 @@ This returns a `MPIHaloArray`
  - `nhalo`: Number of halo cells to create
  - `halo_dims`: Tuple of the dimensions that halo exchanges occur on (not fully working yet)
 """
-function scatterglobal(A::AbstractArray{T, 1}, root::Int, nhalo::Int, 
-    topology::AbstractParallelTopology; halo_dims = (1), do_corners = true, com_model = :p2p) where {T}
+function scatterglobal(A::AbstractArray{T, N, 1}, root::Int, nhalo::Int,
+    topology::AbstractParallelTopology; do_corners = true, com_model = :p2p) where {T, N}
+
+    halo_dims = A.halo_dims
 
     if A isa Base.UnitRange A = collect(A) end
 
     # coords = MPI.Allgather(topology.coords, topology.comm) # -> defaults to a NTuple{3,Int}
     # subdomain_coords = [c[1:topology.dimension] for c in coords] # strip the unused dimensions
     global_domain_size = size(topology)
-    
+
     sizes = get_subdomain_sizes(size(A), global_domain_size, halo_dims)
     indices = get_subdomain_indices(size(A), global_domain_size, halo_dims)
-    
+
     remote_size = sizes[:,topology.rank + 1] |> Tuple
-    
+
     A_local = zeros(eltype(A), remote_size)
     remote_buf = MPI.Buffer(A_local)
-    
+
     reqs = Vector{MPI.Request}(undef, 0)
 
     if topology.rank == root
@@ -45,28 +47,30 @@ function scatterglobal(A::AbstractArray{T, 1}, root::Int, nhalo::Int,
     recievetag = topology.rank + 1000
     rreq = MPI.Irecv!(remote_buf, root, recievetag, topology.comm)
     push!(reqs, rreq)
-    
+
     MPI.Waitall!(reqs)
     return MPIHaloArray(A_local, topology, nhalo; do_corners = do_corners, com_model = com_model)
 end
 
-function scatterglobal(A::AbstractArray{T, 2}, root::Int, nhalo::Int, 
-    topology::AbstractParallelTopology; halo_dims = (1,2), do_corners = true, com_model = :p2p) where {T}
+function scatterglobal(A::AbstractArray{T, N, 2}, root::Int, nhalo::Int,
+    topology::AbstractParallelTopology; do_corners = true, com_model = :p2p) where {T, N}
+
+    halo_dims = A.halo_dims
 
     if A isa Base.ReshapedArray A = collect(A) end
 
     # coords = MPI.Allgather(topology.coords, topology.comm) # -> defaults to a NTuple{3,Int}
     # subdomain_coords = [c[1:topology.dimension] for c in coords] # strip the unused dimensions
     global_domain_size = size(topology)
-    
+
     sizes = get_subdomain_sizes(size(A), global_domain_size, halo_dims)
     indices = get_subdomain_indices(size(A), global_domain_size, halo_dims)
-    
+
     remote_size = sizes[:,topology.rank + 1] |> Tuple
-    
+
     A_local = zeros(eltype(A), remote_size)
     remote_buf = MPI.Buffer(A_local)
-    
+
     reqs = Vector{MPI.Request}(undef, 0)
 
     if topology.rank == root
@@ -85,27 +89,30 @@ function scatterglobal(A::AbstractArray{T, 2}, root::Int, nhalo::Int,
     recievetag = topology.rank + 1000
     rreq = MPI.Irecv!(remote_buf, root, recievetag, topology.comm)
     push!(reqs, rreq)
-    
+
     MPI.Waitall!(reqs)
     return MPIHaloArray(A_local, topology, nhalo; do_corners = do_corners, com_model = com_model)
 end
 
-function scatterglobal(A::AbstractArray{T, 3}, root::Int, nhalo::Int, topology::AbstractParallelTopology; halo_dims = (1,2,3), do_corners = true, com_model = :p2p) where {T}
+function scatterglobal(A::AbstractArray{T, N, 3}, root::Int, nhalo::Int,
+    topology::AbstractParallelTopology; do_corners = true, com_model = :p2p) where {T, N}
+
+    halo_dims = A.halo_dims
 
     if A isa Base.ReshapedArray A = collect(A) end
 
     # coords = MPI.Allgather(topology.coords, topology.comm) # -> defaults to a NTuple{3,Int}
     # subdomain_coords = [c[1:topology.dimension] for c in coords] # strip the unused dimensions
     global_domain_size = size(topology)
-    
+
     sizes = get_subdomain_sizes(size(A), global_domain_size, halo_dims)
     indices = get_subdomain_indices(size(A), global_domain_size, halo_dims)
-    
+
     remote_size = sizes[:,topology.rank + 1] |> Tuple
-    
+
     A_local = zeros(eltype(A), remote_size)
     remote_buf = MPI.Buffer(A_local)
-    
+
     reqs = Vector{MPI.Request}(undef, 0)
 
     if topology.rank == root
@@ -125,7 +132,7 @@ function scatterglobal(A::AbstractArray{T, 3}, root::Int, nhalo::Int, topology::
     recievetag = topology.rank + 1000
     rreq = MPI.Irecv!(remote_buf, root, recievetag, topology.comm)
     push!(reqs, rreq)
-    
+
     MPI.Waitall!(reqs)
     return MPIHaloArray(A_local, topology, nhalo; do_corners = do_corners, com_model = com_model)
 end
@@ -139,7 +146,9 @@ that represents the global state.
  - `root`: MPI rank to gather `A` to
  - `halo_dims`: Tuple of the dimensions that halo exchanges occur on (not fully working yet)
 """
-function gatherglobal(A::MPIHaloArray{T, 1}; root=0, halo_dims=(1)) where {T}
+function gatherglobal(A::MPIHaloArray{T, N, 1}; root=0) where {T, N}
+
+    halo_dims = A.halo_dims
 
     # Index ranges excluding the halo regions
     ilo_l, ihi_l = localindices(A)
@@ -152,7 +161,7 @@ function gatherglobal(A::MPIHaloArray{T, 1}; root=0, halo_dims=(1)) where {T}
     # indices = MPI.Gather(local_indices, root, A.topology.comm)
     global_domain_size = size(A.topology)
     sizes = MPI.Gather(local_size, root, A.topology.comm)
-    
+
     # Allocate the data on root
     if A.topology.rank == root
         global_dims = size(A.topology)
@@ -160,7 +169,7 @@ function gatherglobal(A::MPIHaloArray{T, 1}; root=0, halo_dims=(1)) where {T}
         A_global = Array{T}(undef, output_dim)
         indices = get_subdomain_indices(size(A_global), global_domain_size, halo_dims)
     end
-        
+
     reqs = Vector{MPI.Request}(undef, 0)
 
     # All ranks send to root
@@ -182,12 +191,14 @@ function gatherglobal(A::MPIHaloArray{T, 1}; root=0, halo_dims=(1)) where {T}
     else
         A_global = nothing
     end
-    
+
     MPI.Waitall!(reqs)
     return A_global
 end
 
-function gatherglobal(A::MPIHaloArray{T, 2}; root=0, halo_dims=(1,2)) where {T}
+function gatherglobal(A::MPIHaloArray{T, N, 2}; root=0) where {T, N}
+
+    halo_dims = A.halo_dims
 
     # Index ranges excluding the halo regions
     ilo_l, ihi_l, jlo_l, jhi_l = localindices(A)
@@ -201,7 +212,7 @@ function gatherglobal(A::MPIHaloArray{T, 2}; root=0, halo_dims=(1,2)) where {T}
     # indices = MPI.Gather(local_indices, root, A.topology.comm)
     global_domain_size = size(A.topology)
     sizes = MPI.Gather(local_size, root, A.topology.comm)
-    
+
     # Allocate the data on root
     if A.topology.rank == root
         global_dims = size(A.topology)
@@ -209,7 +220,7 @@ function gatherglobal(A::MPIHaloArray{T, 2}; root=0, halo_dims=(1,2)) where {T}
         A_global = Array{T}(undef, output_dim)
         indices = get_subdomain_indices(size(A_global), global_domain_size, halo_dims)
     end
-        
+
     reqs = Vector{MPI.Request}(undef, 0)
 
     # All ranks send to root
@@ -231,12 +242,14 @@ function gatherglobal(A::MPIHaloArray{T, 2}; root=0, halo_dims=(1,2)) where {T}
     else
         A_global = nothing
     end
-    
+
     MPI.Waitall!(reqs)
     return A_global
 end
 
-function gatherglobal(A::MPIHaloArray{T, 3}; root=0, halo_dims=(1,2,3)) where {T}
+function gatherglobal(A::MPIHaloArray{T, N, 3}; root=0) where {T, N}
+
+    halo_dims = A.halo_dims
 
     # Index ranges excluding the halo regions
     ilo_l, ihi_l, jlo_l, jhi_l, klo_l, khi_l = localindices(A)
@@ -250,7 +263,7 @@ function gatherglobal(A::MPIHaloArray{T, 3}; root=0, halo_dims=(1,2,3)) where {T
     # indices = MPI.Gather(local_indices, root, A.topology.comm)
     global_domain_size = size(A.topology)
     sizes = MPI.Gather(local_size, root, A.topology.comm)
-    
+
     # Allocate the data on root
     if A.topology.rank == root
         global_dims = size(A.topology)
@@ -258,7 +271,7 @@ function gatherglobal(A::MPIHaloArray{T, 3}; root=0, halo_dims=(1,2,3)) where {T
         A_global = Array{T}(undef, output_dim)
         indices = get_subdomain_indices(size(A_global), global_domain_size, halo_dims)
     end
-        
+
     reqs = Vector{MPI.Request}(undef, 0)
 
     # All ranks send to root
@@ -280,7 +293,7 @@ function gatherglobal(A::MPIHaloArray{T, 3}; root=0, halo_dims=(1,2,3)) where {T
     else
         A_global = nothing
     end
-    
+
     MPI.Waitall!(reqs)
     return A_global
 end
