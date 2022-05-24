@@ -3,7 +3,7 @@ using Test, MPI, BenchmarkTools
 testdir = @__DIR__
 
 # No MPI needed for these tests
-include("test_partitioning.jl") 
+include("test_partitioning.jl")
 include("test_dataindices.jl")
 
 mpi_testfiles = [
@@ -30,7 +30,7 @@ end
     file, nprocs = f
     mpiexec() do cmd
         # e.g. run `mpiexec -n 4 julia test_somthing.jl`
-        run(`$cmd -n $nprocs $(Base.julia_cmd()) $(joinpath(testdir, file))`)
+        run(`$cmd -host localhost -n $nprocs $(Base.julia_cmd()) $(joinpath(testdir, file))`)
         @test true
     end
 end
