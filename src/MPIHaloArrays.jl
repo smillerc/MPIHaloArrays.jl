@@ -34,11 +34,10 @@ mutable struct MPIHaloArray{T,N,NN} <: AbstractArray{T,N}
     nhalo::Int
     rank::Int
     topology::CartesianTopology
-    local_indices::Vector{DataIndices}
-    global_indices::Vector{DataIndices}
+    local_indices::Vector{DataIndices{Int}}
+    global_indices::Vector{DataIndices{Int}}
     do_corners::Bool
     halo_dims::NTuple{NN,Int64}
-    # MPIHaloArray{T}(sizes::Vararg{<:Integer,N}, nhalo) where {T,N} = MPIHaloArray(Array{T, 2}(undef, sizes...), nhalo, 0...)
 end
 
 
@@ -61,15 +60,15 @@ include("ops.jl")
 function MPIHaloArray(A::AbstractArray{T,NN}, topo::CartesianTopology, nhalo::Int, halo_dims::NTuple{N,Int}; do_corners=true, com_model=:p2p) where {T,N,NN}
 
     if any(halo_dims .> ndims(A))
-        @error "Some (or all) of the given halo_dims ($(halo_dims)) are incompatible with the dimensionality of the given array A"
+        @error "Some (or all) of the given halo_dims $(halo_dims) are incompatible with the dimensionality of the given array A"
     end
 
     if topo.dimension > ndims(A)
         @error "Dimensionality of the ParallelTopology ($(topo.dimension)) > the dimensionality of the array A ($(length(size(A))))"
     end
 
-    local_di = Vector{DataIndices}(undef, NN)
-    global_di = Vector{DataIndices}(undef, NN)
+    local_di = Vector{DataIndices{Int64}}(undef, NN)
+    global_di = Vector{DataIndices{Int64}}(undef, NN)
 
     A_with_halo = pad_with_halo(A, nhalo, halo_dims)
 
@@ -236,47 +235,31 @@ function domainview(A::MPIHaloArray)
     view(A.data, viewranges...)
 end
 
-function localindices(A::MPIHaloArray{T,1}) where {T}
-    ilo, ihi = A.local_indices[1].domain
-    return (ilo, ihi)
+function localindices(A::MPIHaloArray)
+     getindices(A.local_indices)
 end
 
-function localindices(A::MPIHaloArray{T,2}) where {T}
-    ilo, ihi = A.local_indices[1].domain
-    jlo, jhi = A.local_indices[2].domain
-    return (ilo, ihi, jlo, jhi)
+function globalindices(A::MPIHaloArray)
+     getindices(A.global_indices)
 end
 
-function localindices(A::MPIHaloArray{T,3}) where {T}
-    ilo, ihi = A.local_indices[1].domain
-    jlo, jhi = A.local_indices[2].domain
-    klo, khi = A.local_indices[3].domain
-    return (ilo, ihi, jlo, jhi, klo, khi)
+function getindices(dataindices)
+    indices = zeros(Int, 2length(dataindices))
+
+    for dim in 1:length(dataindices)
+        lo, hi = dataindices[dim].domain
+        indices[2(dim - 1) + 1] = lo
+        indices[2(dim - 1) + 2] = hi
+    end
+
+    return tuple(indices...)
 end
 
-function globalindices(A::MPIHaloArray{T,1}) where {T}
-    ilo, ihi = A.global_indices[1].domain
-    return (ilo, ihi)
-end
-
-function globalindices(A::MPIHaloArray{T,2}) where {T}
-    ilo, ihi = A.global_indices[1].domain
-    jlo, jhi = A.global_indices[2].domain
-    return (ilo, ihi, jlo, jhi)
-end
-
-function globalindices(A::MPIHaloArray{T,3}) where {T}
-    ilo, ihi = A.global_indices[1].domain
-    jlo, jhi = A.global_indices[2].domain
-    klo, khi = A.global_indices[3].domain
-    return (ilo, ihi, jlo, jhi, klo, khi)
-end
-
-@inline function lo_indices(A::MPIHaloArray{T,N}, dim) where {T,N}
+@inline function lo_indices(A::MPIHaloArray, dim)
     lo_indices(A.data, dim, A.nhalo)
 end
 
-@inline function hi_indices(A::MPIHaloArray{T,N}, dim) where {T,N}
+@inline function hi_indices(A::MPIHaloArray, dim)
     hi_indices(A.data, dim, A.nhalo)
 end
 
