@@ -60,11 +60,15 @@ include("ops.jl")
 function MPIHaloArray(A::AbstractArray{T,NN}, topo::CartesianTopology, nhalo::Int, halo_dims::NTuple{N,Int}; do_corners=true, com_model=:p2p) where {T,N,NN}
 
     if any(halo_dims .> ndims(A))
-        @error "Some (or all) of the given halo_dims $(halo_dims) are incompatible with the dimensionality of the given array A"
+        error("Some (or all) of the given halo_dims $(halo_dims) are incompatible with the dimensionality of the given array A")
     end
 
     if topo.dimension > ndims(A)
-        @error "Dimensionality of the ParallelTopology ($(topo.dimension)) > the dimensionality of the array A ($(length(size(A))))"
+        error("Dimensionality of the ParallelTopology ($(topo.dimension)) > the dimensionality of the array A ($(length(size(A))))")
+    end
+
+    if topo.dimension < length(halo_dims)
+        error("Mismatched topology dimensionality ($(topo.dimension)D) and halo region dimensions ($(length(halo_dims))D)")
     end
 
     local_di = Vector{DataIndices{Int64}}(undef, NN)
