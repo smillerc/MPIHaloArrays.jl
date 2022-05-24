@@ -73,23 +73,41 @@ function MPIHaloArray(A::AbstractArray{T,NN}, topo::CartesianTopology, nhalo::In
 
     A_with_halo = pad_with_halo(A, nhalo, halo_dims)
 
-    for dim in halo_dims
-        lo_halo_start, lo_halo_end, lo_dom_start, lo_dom_end = lo_indices(A_with_halo, dim, nhalo)
-        hi_dom_start, hi_dom_end, hi_halo_start, hi_halo_end = hi_indices(A_with_halo, dim, nhalo)
+    for dim in 1:ndims(A)
 
-        local_di[dim] = DataIndices((lo_halo_start, lo_halo_end),
-                                    (lo_dom_start , lo_dom_end),
-                                    (lo_dom_start , hi_dom_end),
-                                    (hi_dom_start , hi_dom_end),
-                                    (hi_halo_start, hi_halo_end))
+        if dim in halo_dims
+            lo_halo_start, lo_halo_end, lo_dom_start, lo_dom_end = lo_indices(A_with_halo, dim, nhalo)
+            hi_dom_start, hi_dom_end, hi_halo_start, hi_halo_end = hi_indices(A_with_halo, dim, nhalo)
 
-        # TODO: this is wrong -- it assumes a constant size
-        global_offset = (hi_halo_end - lo_halo_start + 1) * topo.coords[dim]
-        global_di[dim] = DataIndices((lo_halo_start, lo_halo_end) .+ global_offset,
-                                     (lo_dom_start , lo_dom_end ) .+ global_offset,
-                                     (lo_dom_start , hi_dom_end ) .+ global_offset,
-                                     (hi_dom_start , hi_dom_end ) .+ global_offset,
-                                     (hi_halo_start, hi_halo_end) .+ global_offset)
+            local_di[dim] = DataIndices((lo_halo_start, lo_halo_end),
+                                        (lo_dom_start , lo_dom_end),
+                                        (lo_dom_start , hi_dom_end),
+                                        (hi_dom_start , hi_dom_end),
+                                        (hi_halo_start, hi_halo_end))
+
+            # TODO: this is wrong -- it assumes a constant size
+            global_offset = (hi_halo_end - lo_halo_start + 1) * topo.coords[dim]
+            global_di[dim] = DataIndices((lo_halo_start, lo_halo_end) .+ global_offset,
+                                        (lo_dom_start , lo_dom_end ) .+ global_offset,
+                                        (lo_dom_start , hi_dom_end ) .+ global_offset,
+                                        (hi_dom_start , hi_dom_end ) .+ global_offset,
+                                        (hi_halo_start, hi_halo_end) .+ global_offset)
+        else
+            lo = firstindex(A, dim)
+            hi = lastindex(A, dim)
+            local_di[dim] = DataIndices((lo, lo),
+                                        (lo, lo),
+                                        (lo, hi),
+                                        (hi, hi),
+                                        (hi, hi))
+
+            global_offset = (hi - lo + 1) * topo.coords[dim]
+            global_di[dim] = DataIndices((lo, lo) .+ global_offset,
+                                         (lo, lo) .+ global_offset,
+                                         (lo, hi) .+ global_offset,
+                                         (hi, hi) .+ global_offset,
+                                         (hi, hi) .+ global_offset)
+        end
     end
 
     update_halo_data!(A, A_with_halo, halo_dims, nhalo)
