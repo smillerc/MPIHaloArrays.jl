@@ -63,12 +63,8 @@ function MPIHaloArray(A::AbstractArray{T,NN}, topo::CartesianTopology, nhalo::In
         error("Some (or all) of the given halo_dims $(halo_dims) are incompatible with the dimensionality of the given array A")
     end
 
-    if topo.dimension > ndims(A)
-        error("Dimensionality of the ParallelTopology ($(topo.dimension)) > the dimensionality of the array A ($(length(size(A))))")
-    end
-
-    if topo.dimension < length(halo_dims)
-        error("Mismatched topology dimensionality ($(topo.dimension)D) and halo region dimensions ($(length(halo_dims))D)")
+    if topo.dimension != length(halo_dims)
+        error("Mismatched topology/halo exchange dimensionality (topology is $(topo.dimension)D, halo exchange dimensions are $(length(halo_dims))D)")
     end
 
     local_di = Vector{DataIndices{Int64}}(undef, NN)
@@ -117,6 +113,10 @@ function MPIHaloArray(A::AbstractArray{T,NN}, topo::CartesianTopology, nhalo::In
     MPIHaloArray(A_with_halo, nhalo, topo.rank, topo, local_di, global_di, do_corners, halo_dims)
 end
 
+
+function MPIHaloArray(A::AbstractArray{T,N}, topo::CartesianTopology, nhalo::Int, halo_dims::Int; do_corners=true, com_model=:p2p) where {T,N}
+    MPIHaloArray(A, topo, nhalo, tuple(halo_dims); do_corners=do_corners, com_model=com_model)
+end
 
 function MPIHaloArray(A::AbstractArray{T,N}, topo::CartesianTopology, nhalo::Int; do_corners=true, com_model=:p2p) where {T,N}
     halo_dims = Tuple(1:ndims(A)) # unless specified, assume that halo exchange is done on every dimension

@@ -96,10 +96,10 @@ Create a CartesianTopology type that holds neighbor information, current rank, e
 P = CartesianTopology((4,4), (true, true))
 ```
 """
-function CartesianTopology(comm::MPI.Comm, dims, periodicity; canreorder = false)
+function CartesianTopology(comm::MPI.Comm, dims::NTuple{N, Int64}, periodicity::NTuple{N, Bool}; canreorder = false) where {N}
     dims = collect(dims)
     periodicity = collect(periodicity)
-    
+
     # comm = MPI.COMM_WORLD
     rank = MPI.Comm_rank(comm)
     nprocs = MPI.Comm_size(comm)
@@ -186,6 +186,34 @@ function CartesianTopology(comm::MPI.Comm, dims, periodicity; canreorder = false
     CartesianTopology(comm_cart, nprocs, rank, topo_dim, coords_tuple, dims_tuple, periodicity_tuple, neighbors)
 end
 
+"""
+    CartesianTopology(comm::MPI.Comm, periodicity::Bool; canreorder = false)
+
+Create CartesianTopology only with the vector of boundary periodicity given. This finds the
+optimal sub-domain ordering for the user.
+"""
+function CartesianTopology(comm::MPI.Comm, nprocs::Int, periodicity::Bool; canreorder = false)
+    CartesianTopology(comm, nprocs, tuple(periodicity); canreorder = canreorder)
+end
+
+"""
+    CartesianTopology(comm::MPI.Comm, ::Tuple{Bool}; canreorder = false)
+
+Create CartesianTopology only with the vector of boundary periodicity given. This finds the
+optimal sub-domain ordering for the user.
+"""
+function CartesianTopology(comm::MPI.Comm, nprocs::Int, periodicity::NTuple{N,Bool}; canreorder = false) where {N}
+    if length(periodicity) == 3
+        dims = num_3d_tiles(nprocs)
+    elseif length(periodicity) == 2
+        dims = num_2d_tiles(nprocs)
+    elseif length(periodicity) == 1
+        dims = tuple(nprocs)
+    end
+
+    CartesianTopology(comm, dims, periodicity; canreorder = canreorder)
+end
+
 function vec_to_ntuple(v::Vector{T}) where {T <: Number}
     if length(v) < 3
         return vcat(v, zeros(T, 3 - length(v))) |> Tuple
@@ -202,33 +230,10 @@ function vec_to_ntuple(v::Vector{Bool})
     end
 end
 
-function CartesianTopology(comm::MPI.Comm, dims::Int, periodicity::Bool; canreorder = false)
-    CartesianTopology(comm, [dims], [periodicity]; canreorder = canreorder)
-end
-
-"""
-    CartesianTopology(comm::MPI.Comm, periodicity::Vector{Bool}; canreorder = false)
-
-Create CartesianTopology only with the vector of boundary periodicity given. This finds the
-optimal sub-domain ordering for the user.
-"""
-function CartesianTopology(comm::MPI.Comm, periodicity::Vector{Bool}; canreorder = false)
-    nprocs = MPI.Comm_size(comm)
-    if length(periodicity) == 3
-        dims = num_3d_tiles(nprocs)
-    elseif length(periodicity) == 2
-        dims = num_2d_tiles(nprocs)
-    elseif length(periodicity) == 1
-        dims = nprocs
-    end
-
-    CartesianTopology(comm, dims, periodicity; canreorder = canreorder)
-end
-
-# function CartesianTopology(comm::MPI.Comm, periodicity::Bool; canreorder = false)
-#     nprocs = MPI.Comm_size(comm)
-#     CartesianTopology(comm, nprocs, periodicity; canreorder = canreorder)
+# function CartesianTopology(comm::MPI.Comm, dims::Int, periodicity::Bool; canreorder = false)
+#     CartesianTopology(comm, [dims], [periodicity]; canreorder = canreorder)
 # end
+
 
 
 """Helper function to find rank based on 3D offsets"""
@@ -342,7 +347,7 @@ end
 
 
 """Return all common denominators of n"""
-function denominators1(n::Integer)
+function denominators(n::Integer)
     denominators = Vector{Int}(undef, 0)
     for i in 1:n
         if mod(n, i) == 0
@@ -353,7 +358,7 @@ function denominators1(n::Integer)
 end
 
 """Returns the optimal number of tiles in (i,j) given total number of tiles n"""
-function num_2d_tiles1(n)
+function num_2d_tiles(n)
     # find all common denominators of the total number of images
     denoms = denominators(n)
 
@@ -379,11 +384,12 @@ function num_2d_tiles1(n)
             num_2d_tiles = [dim1[i], dim2[i]]
         end
     end
-    return num_2d_tiles
+
+    return tuple(num_2d_tiles...)
 end
 
 """Returns the optimal number of tiles in (i,j,k) given total number of tiles n"""
-function num_3d_tiles1(n)
+function num_3d_tiles(n)
     # find all common denominators of the total number of images
     denoms = denominators(n)
 
@@ -413,7 +419,8 @@ function num_3d_tiles1(n)
             num_3d_tiles = [dim1[i], dim2[i], dim3[i]]
         end
     end
-    return num_3d_tiles
+
+    return tuple(num_3d_tiles...)
 end
 
 # """
