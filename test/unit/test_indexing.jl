@@ -13,7 +13,6 @@ const nprocs = MPI.Comm_size(comm)
 
 function test_2d_indices()
     topology = CartesianTopology(comm, [4,4], [false, false])
-    # topology = CartesianTopology(comm, [1], [false])
 
     nhalo = 2
     ni = 4
@@ -24,7 +23,7 @@ function test_2d_indices()
     jlo_halo_start, jlo_halo_end, jlo_dom_start, jlo_dom_end = lo_indices(A, 2)
     ihi_dom_start, ihi_dom_end, ihi_halo_start, ihi_halo_end = hi_indices(A, 1)
     jhi_dom_start, jhi_dom_end, jhi_halo_start, jhi_halo_end = hi_indices(A, 2)
-    
+
     # 1 2 | 3 4 5 6 | 7 8
     @test ilo_halo_start == 1
     @test ilo_halo_end == 2
@@ -41,7 +40,7 @@ function test_2d_indices()
     @test jlo_halo_end == 2
     @test jlo_dom_start == 3
     @test jlo_dom_end == 4
-    
+
     @test jhi_dom_start == 3
     @test jhi_dom_end == 4
     @test jhi_halo_start == 5
@@ -49,7 +48,7 @@ function test_2d_indices()
 end
 
 function test_2d_indices_offset()
-    topology = CartesianTopology(comm, [4,4], [false, false])
+    topology = CartesianTopology(comm, (4,4), (false, false))
 
     nhalo = 2
     ni = 6
@@ -84,7 +83,7 @@ function test_2d_indices_offset()
 end
 
 test_2d_indices()
-# test_2d_indices_offset()
+# test_2d_indices_ofset() # OffsetArrays are currently unsupported
 
 GC.gc()
 MPI.Finalize()

@@ -96,7 +96,7 @@ Create a CartesianTopology type that holds neighbor information, current rank, e
 P = CartesianTopology((4,4), (true, true))
 ```
 """
-function CartesianTopology(comm::MPI.Comm, dims::NTuple{N, Int64}, periodicity::NTuple{N, Bool}; canreorder = false) where {N}
+function CartesianTopology(comm::MPI.Comm, dims::NTuple{N, Int}, periodicity::NTuple{N, Bool}; canreorder = false) where {N}
     dims = collect(dims)
     periodicity = collect(periodicity)
 
@@ -186,6 +186,10 @@ function CartesianTopology(comm::MPI.Comm, dims::NTuple{N, Int64}, periodicity::
     CartesianTopology(comm_cart, nprocs, rank, topo_dim, coords_tuple, dims_tuple, periodicity_tuple, neighbors)
 end
 
+function CartesianTopology(comm::MPI.Comm, dims::Vector{Int}, periodicity::Vector{Bool}; canreorder = false) where {N}
+    CartesianTopology(comm, tuple(dims...), tuple(periodicity...); canreorder = canreorder)
+end
+
 """
     CartesianTopology(comm::MPI.Comm, periodicity::Bool; canreorder = false)
 
@@ -229,12 +233,6 @@ function vec_to_ntuple(v::Vector{Bool})
         return v |> Tuple
     end
 end
-
-# function CartesianTopology(comm::MPI.Comm, dims::Int, periodicity::Bool; canreorder = false)
-#     CartesianTopology(comm, [dims], [periodicity]; canreorder = canreorder)
-# end
-
-
 
 """Helper function to find rank based on 3D offsets"""
 function offset_coord_to_rank(comm, dims, periods, i_offset::Int, j_offset::Int, k_offset::Int)

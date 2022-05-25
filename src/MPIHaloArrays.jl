@@ -59,6 +59,10 @@ include("ops.jl")
 """
 function MPIHaloArray(A::AbstractArray{T,NN}, topo::CartesianTopology, nhalo::Int, halo_dims::NTuple{N,Int}; do_corners=true, com_model=:p2p) where {T,N,NN}
 
+    if A isa OffsetArray
+        error("OffsetArrays are currently unsupported")
+    end
+
     if any(halo_dims .> ndims(A))
         error("Some (or all) of the given halo_dims $(halo_dims) are incompatible with the dimensionality of the given array A")
     end
@@ -154,7 +158,7 @@ function update_halo_data!(A_no_halo, A_with_halo, halo_dims, nhalo)
     end
 
     A_with_halo_data = @view A_with_halo[view_dims...]
-    copy!(A_with_halo_data, A_no_halo)
+    copyto!(A_with_halo_data, A_no_halo)
 
     return nothing
 end

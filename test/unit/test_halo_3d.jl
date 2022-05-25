@@ -11,7 +11,7 @@ const nprocs = MPI.Comm_size(comm)
 @assert nprocs == 8 "This MPIHaloArray edge_sync test is designed with 4 processes only"
 
 function test_edge_sync_3darray_2halo_no_periodic()
-    topology = CartesianTopology(comm, [2,2,2], [false,false,false])
+    topology = CartesianTopology(comm, (2,2,2), (false,false,false))
 
     nhalo = 2
     ni = 8
@@ -46,12 +46,12 @@ function test_edge_sync_3darray_2halo_no_periodic()
     A_ilojhi_halo = @view A.data[ilo_halo_start:ilo_halo_end, jhi_halo_start:jhi_halo_end, klo:khi]
     A_ihijlo_halo = @view A.data[ihi_halo_start:ihi_halo_end, jlo_halo_start:jlo_halo_end, klo:khi]
     A_ihijhi_halo = @view A.data[ihi_halo_start:ihi_halo_end, jhi_halo_start:jhi_halo_end, klo:khi]
-    
+
     A_jloklo_halo = @view A.data[ilo:ihi, jlo_halo_start:jlo_halo_end, klo_halo_start:klo_halo_end]
     A_jlokhi_halo = @view A.data[ilo:ihi, jlo_halo_start:jlo_halo_end, khi_halo_start:khi_halo_end]
     A_jhiklo_halo = @view A.data[ilo:ihi, jhi_halo_start:jhi_halo_end, klo_halo_start:klo_halo_end]
     A_jhikhi_halo = @view A.data[ilo:ihi, jhi_halo_start:jhi_halo_end, khi_halo_start:khi_halo_end]
-    
+
     A_iloklo_halo = @view A.data[ilo_halo_start:ilo_halo_end, jlo:jhi, klo_halo_start:klo_halo_end]
     A_ilokhi_halo = @view A.data[ilo_halo_start:ilo_halo_end, jlo:jhi, khi_halo_start:khi_halo_end]
     A_ihiklo_halo = @view A.data[ihi_halo_start:ihi_halo_end, jlo:jhi, klo_halo_start:klo_halo_end]
@@ -61,7 +61,7 @@ function test_edge_sync_3darray_2halo_no_periodic()
     A_ilojhiklo_halo = @view A.data[ilo_halo_start:ilo_halo_end, jhi_halo_start:jhi_halo_end, klo_halo_start:klo_halo_end]
     A_ihijloklo_halo = @view A.data[ihi_halo_start:ihi_halo_end, jlo_halo_start:jlo_halo_end, klo_halo_start:klo_halo_end]
     A_ihijhiklo_halo = @view A.data[ihi_halo_start:ihi_halo_end, jhi_halo_start:jhi_halo_end, klo_halo_start:klo_halo_end]
-    
+
     A_ilojlokhi_halo = @view A.data[ilo_halo_start:ilo_halo_end, jlo_halo_start:jlo_halo_end, khi_halo_start:khi_halo_end]
     A_ilojhikhi_halo = @view A.data[ilo_halo_start:ilo_halo_end, jhi_halo_start:jhi_halo_end, khi_halo_start:khi_halo_end]
     A_ihijlokhi_halo = @view A.data[ihi_halo_start:ihi_halo_end, jlo_halo_start:jlo_halo_end, khi_halo_start:khi_halo_end]
@@ -96,7 +96,7 @@ function test_edge_sync_3darray_2halo_no_periodic()
         @test all(A_ilojhiklo_halo .== -1)
         @test all(A_ihijloklo_halo .== -1)
         @test all(A_ihijhiklo_halo .== -1)
-        
+
         @test all(A_ilojlokhi_halo .== -1)
         @test all(A_ilojhikhi_halo .== -1)
         @test all(A_ihijlokhi_halo .== -1)
@@ -105,7 +105,7 @@ function test_edge_sync_3darray_2halo_no_periodic()
 end
 
 function test_edge_sync_3darray_2halo_all_periodic()
-    topology = CartesianTopology(comm, [2,2,2], [true, true, true])
+    topology = CartesianTopology(comm, (2,2,2), (true, true, true))
 
     nhalo = 2
     ni = 8
@@ -140,12 +140,12 @@ function test_edge_sync_3darray_2halo_all_periodic()
     A_ilojhi_halo = @view A.data[ilo_halo_start:ilo_halo_end, jhi_halo_start:jhi_halo_end, klo:khi]
     A_ihijlo_halo = @view A.data[ihi_halo_start:ihi_halo_end, jlo_halo_start:jlo_halo_end, klo:khi]
     A_ihijhi_halo = @view A.data[ihi_halo_start:ihi_halo_end, jhi_halo_start:jhi_halo_end, klo:khi]
-    
+
     A_jloklo_halo = @view A.data[ilo:ihi, jlo_halo_start:jlo_halo_end, klo_halo_start:klo_halo_end]
     A_jlokhi_halo = @view A.data[ilo:ihi, jlo_halo_start:jlo_halo_end, khi_halo_start:khi_halo_end]
     A_jhiklo_halo = @view A.data[ilo:ihi, jhi_halo_start:jhi_halo_end, klo_halo_start:klo_halo_end]
     A_jhikhi_halo = @view A.data[ilo:ihi, jhi_halo_start:jhi_halo_end, khi_halo_start:khi_halo_end]
-    
+
     A_iloklo_halo = @view A.data[ilo_halo_start:ilo_halo_end, jlo:jhi, klo_halo_start:klo_halo_end]
     A_ilokhi_halo = @view A.data[ilo_halo_start:ilo_halo_end, jlo:jhi, khi_halo_start:khi_halo_end]
     A_ihiklo_halo = @view A.data[ihi_halo_start:ihi_halo_end, jlo:jhi, klo_halo_start:klo_halo_end]
@@ -155,7 +155,7 @@ function test_edge_sync_3darray_2halo_all_periodic()
     A_ilojhiklo_halo = @view A.data[ilo_halo_start:ilo_halo_end, jhi_halo_start:jhi_halo_end, klo_halo_start:klo_halo_end]
     A_ihijloklo_halo = @view A.data[ihi_halo_start:ihi_halo_end, jlo_halo_start:jlo_halo_end, klo_halo_start:klo_halo_end]
     A_ihijhiklo_halo = @view A.data[ihi_halo_start:ihi_halo_end, jhi_halo_start:jhi_halo_end, klo_halo_start:klo_halo_end]
-    
+
     A_ilojlokhi_halo = @view A.data[ilo_halo_start:ilo_halo_end, jlo_halo_start:jlo_halo_end, khi_halo_start:khi_halo_end]
     A_ilojhikhi_halo = @view A.data[ilo_halo_start:ilo_halo_end, jhi_halo_start:jhi_halo_end, khi_halo_start:khi_halo_end]
     A_ihijlokhi_halo = @view A.data[ihi_halo_start:ihi_halo_end, jlo_halo_start:jlo_halo_end, khi_halo_start:khi_halo_end]

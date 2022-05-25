@@ -31,8 +31,8 @@ function rank_data(ni, nj, rank)
 end
 
 function test_edge_sync_2darray_2halo_no_periodic()
-    topology = CartesianTopology(comm, [4,2], [false, false])
-    # topology = CartesianTopology(comm, [4,2], [true, true])
+    topology = CartesianTopology(comm, (4,2), (false, false))
+    # topology = CartesianTopology(comm, (4,2), (true, true))
 
     nhalo = 2
     ni = 6
@@ -68,7 +68,7 @@ function test_edge_sync_2darray_2halo_no_periodic()
 end
 
 function test_edge_sync_2darray_2halo_all_periodic()
-    topology = CartesianTopology(comm, [4,2], [true, true])
+    topology = CartesianTopology(comm, (4,2), (true, true))
 
     nhalo = 2
     ni = 6
@@ -92,7 +92,7 @@ function test_edge_sync_2darray_2halo_all_periodic()
     A_jhi_halo = @view A.data[ilo:ihi, jhi_halo_start:jhi_halo_end]
 
     updatehalo!(A)
-  
+
     if rank == 0
         ihi_neighbor_ilo_edge = rank_data(ni,nj,1)[1:nhalo,:]
         jhi_neighbor_jlo_edge = rank_data(ni,nj,4)[:,1:nhalo]
