@@ -37,7 +37,7 @@ mutable struct MPIHaloArray{T,N,NN} <: AbstractArray{T,N}
     local_indices::Vector{DataIndices{Int}}
     global_indices::Vector{DataIndices{Int}}
     do_corners::Bool
-    halo_dims::NTuple{NN,Int64}
+    halo_dims::NTuple{NN,Int}
 end
 
 
@@ -71,8 +71,8 @@ function MPIHaloArray(A::AbstractArray{T,NN}, topo::CartesianTopology, nhalo::In
         error("Mismatched topology/halo exchange dimensionality (topology is $(topo.dimension)D, halo exchange dimensions are $(length(halo_dims))D)")
     end
 
-    local_di = Vector{DataIndices{Int64}}(undef, NN)
-    global_di = Vector{DataIndices{Int64}}(undef, NN)
+    local_di = Vector{DataIndices{Int}}(undef, NN)
+    global_di = Vector{DataIndices{Int}}(undef, NN)
 
     A_with_halo = pad_with_halo(A, nhalo, halo_dims)
 
@@ -143,7 +143,7 @@ to `A_with_halo` (which is the underlying array within the `MPIHaloArray`)
 """
 function update_halo_data!(A_no_halo, A_with_halo, halo_dims, nhalo)
 
-    view_dims = Vector{UnitRange{Int64}}(undef, ndims(A_no_halo))
+    view_dims = Vector{UnitRange{Int}}(undef, ndims(A_no_halo))
 
     # Construct the ranges in each dimension that the real data lives within
     for dim in 1:ndims(A_no_halo)

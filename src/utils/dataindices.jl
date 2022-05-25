@@ -1,5 +1,5 @@
 
-struct DataIndices{T <: Int64}
+struct DataIndices{T <: Int}
     lo_halo::NTuple{2,T}               # (start,end) indices of the halo region on the low side
     lo_halo_domain_donor::NTuple{2,T}  # (start,end) indices of the domain region on the low side that "donates" to the halo region
     domain::NTuple{2,T}                # (start,end) indices of the real domain
