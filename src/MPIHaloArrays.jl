@@ -244,24 +244,24 @@ function domainview(A::MPIHaloArray)
     view(A.data, viewranges...)
 end
 
-function halo_edge_views(A::MPIHaloArray, dim)
-    lo_view_dims = axes(A) .|> UnitRange |> collect
-    hi_view_dims = axes(A) .|> UnitRange |> collect
+# function halo_edge_views(A::MPIHaloArray, dim)
+#     lo_view_dims = axes(A) .|> UnitRange |> collect
+#     hi_view_dims = axes(A) .|> UnitRange |> collect
 
-    lo_halo_start, lo_halo_end = A.local_indices[dim].lo_halo
-    hi_halo_start, hi_halo_end = A.local_indices[dim].hi_halo
+#     lo_halo_start, lo_halo_end = A.local_indices[dim].lo_halo
+#     hi_halo_start, hi_halo_end = A.local_indices[dim].hi_halo
 
-    lo_view_dims[dim] = lo_halo_start:lo_halo_end
-    hi_view_dims[dim] = hi_halo_start:hi_halo_end
+#     lo_view_dims[dim] = lo_halo_start:lo_halo_end
+#     hi_view_dims[dim] = hi_halo_start:hi_halo_end
 
-    lo_view = @view A[lo_view_dims...]
-    hi_view = @view A[hi_view_dims...]
+#     lo_view = @view A[lo_view_dims...]
+#     hi_view = @view A[hi_view_dims...]
 
-    return lo_view, hi_view
-end
+#     return lo_view, hi_view
+# end
 
-function domain_edge_view(A::MPIHaloArray, dim, hi_or_low)
-end
+# function domain_edge_view(A::MPIHaloArray, dim, hi_or_low)
+# end
 
 """
     local_domain_indices(A::MPIHaloArray)
