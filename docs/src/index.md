@@ -40,8 +40,8 @@ filldomain!(A, rank)
 x[1,1] .= 2.0
 
 # Get the local/global indices of the _domain_ data (not including the halo cells)
-ilo, ihi, jlo, jhi = localindices(x) # -> useful for looping without going into halo regions
-ilo_g, ihi_g, jlo_g, jhi_g = globalindices(x)
+ilo, ihi, jlo, jhi = local_domain_indices(x) # -> useful for looping without going into halo regions
+ilo_g, ihi_g, jlo_g, jhi_g = global_domain_indices(x)
 
 # Exchange data with neighbors
 updatehalo!(x)

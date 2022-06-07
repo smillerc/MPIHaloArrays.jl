@@ -27,7 +27,7 @@ end
 
 """Perform 2D heat diffusion"""
 function diffusion!(T, T_new, α, dt, dx, dy)
-    ilo, ihi, jlo, jhi = localindices(T)
+    ilo, ihi, jlo, jhi = local_domain_indices(T)
     for j in jlo:jhi
         for i in ilo:ihi
             T_new[i, j] = T[i, j] + α * dt * ((T[i-1, j] - 2 * T[i, j] + T[i+1, j]) / dx^2 +
