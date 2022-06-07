@@ -25,8 +25,8 @@ filldomain!(A, rank)
 x[1,1] .= 2.0
 
 # Get the local/global indices of the _domain_ data (not including the halo cells)
-ilo, ihi, jlo, jhi = localindices(x) # -&gt; useful for looping without going into halo regions
-ilo_g, ihi_g, jlo_g, jhi_g = globalindices(x)
+ilo, ihi, jlo, jhi = local_domain_indices(x) # -&gt; useful for looping without going into halo regions
+ilo_g, ihi_g, jlo_g, jhi_g = global_domain_indices(x)
 
 # Exchange data with neighbors
 updatehalo!(x)
@@ -45,4 +45,4 @@ A_local = scatterglobal(A_global, root, nhalo, topology) # -&gt; returns a MPIHa
 # do some work...
 
 # and now gather the decomposed domain and store on the root rank of choice
-A_global_result = gatherglobal(A_local; root=root) # -&gt; returns a Base.Array</code></pre><p>At the moment, reductions are not implemented, but will be in the future...</p></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="examples/01-halo1d/">1D Halo Example »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Wednesday 25 May 2022 14:35">Wednesday 25 May 2022</span>. Using Julia version 1.6.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+A_global_result = gatherglobal(A_local; root=root) # -&gt; returns a Base.Array</code></pre><p>At the moment, reductions are not implemented, but will be in the future...</p></article><nav class="docs-footer"><a class="docs-footer-nextpage" href="examples/01-halo1d/">1D Halo Example »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Tuesday 7 June 2022 18:39">Tuesday 7 June 2022</span>. Using Julia version 1.6.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
