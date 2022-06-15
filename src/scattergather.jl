@@ -145,9 +145,7 @@ function gatherglobal(A::MPIHaloArray{T, N, 1}; root=0) where {T, N}
     halo_dims = A.halo_dims
 
     # Index ranges excluding the halo regions
-    ilo_l, ihi_l = localindices(A)
-    local_indices = (ilo_l, ihi_l)
-    local_data = @view A.data[ilo_l:ihi_l]
+    local_data = domainview(A)
     local_size = size(local_data)
     local_buf = MPI.Buffer(local_data)
 
@@ -195,9 +193,7 @@ function gatherglobal(A::MPIHaloArray{T, N, 2}; root=0) where {T, N}
     halo_dims = A.halo_dims
 
     # Index ranges excluding the halo regions
-    ilo_l, ihi_l, jlo_l, jhi_l = localindices(A)
-    local_indices = (ilo_l, ihi_l, jlo_l, jhi_l)
-    local_data = @view A.data[ilo_l:ihi_l, jlo_l:jhi_l]
+    local_data = domainview(A)
     local_size = size(local_data)
     local_buf = MPI.Buffer(local_data)
     # println("Rank $(A.topology.rank), local_indices: $(local_indices)\n")
@@ -246,9 +242,7 @@ function gatherglobal(A::MPIHaloArray{T, N, 3}; root=0) where {T, N}
     halo_dims = A.halo_dims
 
     # Index ranges excluding the halo regions
-    ilo_l, ihi_l, jlo_l, jhi_l, klo_l, khi_l = localindices(A)
-    local_indices = (ilo_l, ihi_l, jlo_l, jhi_l, klo_l, khi_l)
-    local_data = @view A.data[ilo_l:ihi_l, jlo_l:jhi_l, klo_l:khi_l]
+    local_data = domainview(A)
     local_size = size(local_data)
     local_buf = MPI.Buffer(local_data)
     # println("Rank $(A.topology.rank), local_indices: $(local_indices)\n")

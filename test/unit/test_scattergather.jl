@@ -54,7 +54,7 @@ function test_2darray_scatter_gather()
 
     A_local = scatterglobal(A_global, root, nhalo, topology)
 
-    ilo,ihi,jlo,jhi = localindices(A_local)
+    ilo,ihi,jlo,jhi = local_domain_indices(A_local)
 
     # Test to see if the splitting/partitioning was done correctly
     if rank == 0
@@ -85,7 +85,7 @@ function test_3darray_scatter_gather()
 
     A_local = scatterglobal(A_global, root, nhalo, topology)
 
-    ilo, ihi, jlo, jhi, klo, khi = localindices(A_local)
+    ilo, ihi, jlo, jhi, klo, khi = local_domain_indices(A_local)
 
     # Test to see if the splitting/partitioning was done correctly
     if rank == 0

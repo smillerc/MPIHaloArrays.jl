@@ -63,7 +63,7 @@ filldomain!(A, rank)
 A[1,1] .= 2.0
 
 # Get the local/global indices of the _domain_ data (not including the halo cells)
-ilo, ihi, jlo, jhi = localindices(x) # -> useful for looping without going into halo regions
+ilo, ihi, jlo, jhi = local_domain_indices(x) # -> useful for looping without going into halo regions
 
 # Exchange data with neighbors
 updatehalo!(x)
@@ -144,7 +144,7 @@ A = MPIHaloArray(data, topology, 2)
 
 A slightly more useful example that performs 2D heat diffusion is shown [here](docs/examples/04-diffusion2d.jl). This shows how to
  - Scatter initial conditions from the root node to each MPI process with `scatterglobal()`
- - Perform a stencil operation within the current `MPIHaloArray`. This looks like any other normal array loop, but the bounds are determined by the `MPIHaloArray` via `localindices()`
+ - Perform a stencil operation within the current `MPIHaloArray`. This looks like any other normal array loop, but the bounds are determined by the `MPIHaloArray` via `local_domain_indices()`
  - Update halo cells / neighbor information. Periodic boundary conditions are also handled by the `CartesianTopology` type.
  - Gather results to the root node for plotting/output with `gatherglobal()`
 

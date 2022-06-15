@@ -1,6 +1,7 @@
 module MPIHaloArrays
 
 using MPI
+using EllipsisNotation
 using OffsetArrays
 
 include("topology.jl")
@@ -14,7 +15,7 @@ export ilo_neighbor, ihi_neighbor, jlo_neighbor, jhi_neighbor, klo_neighbor, khi
 export lo_indices, hi_indices, fillhalo!, filldomain!
 export updatehalo!, domainview
 export scatterglobal, gatherglobal
-export localindices, globalindices
+export local_domain_indices, global_domain_indices
 export globalmin, globalmax, globalsum
 
 """
@@ -197,7 +198,7 @@ Base.setindex!(A::MPIHaloArray{T,N}, v, I::Vararg{Int,N}) where {T,N} = setindex
 """
     fillhalo!(A::MPIHaloArray, fillvalue)
 
-Fill the halo regions with a particular `fillvalue`
+Fill the halo regions with a particular `fillvalue`.
 
 # Arguments
  - `A::MPIHaloArray`
@@ -228,34 +229,75 @@ function fillhalo!(A::MPIHaloArray, fillvalue)
     return nothing
 end
 
-"""Fill the domain data with a single `filval`"""
+"""Fill the domain data with a single `filval`."""
 function filldomain!(A::MPIHaloArray, fillval)
     domain = domainview(A)
     fill!(domain, fillval)
 end
 
-"""Return a view or `SubArray` of the domain data within the `MPIHaloArray`"""
+"""Return a view or `SubArray` of the domain data within the `MPIHaloArray`."""
 function domainview(A::MPIHaloArray)
-    li = localindices(A)
+    li = local_domain_indices(A)
     lo = li[1:2:end] # low indicies
     hi = li[2:2:end] # high indices
     viewranges = [UnitRange(l, h) for (l, h) in zip(lo, hi)] |> Tuple
     view(A.data, viewranges...)
 end
 
-function localindices(A::MPIHaloArray)
+# function halo_edge_views(A::MPIHaloArray, dim)
+#     lo_view_dims = axes(A) .|> UnitRange |> collect
+#     hi_view_dims = axes(A) .|> UnitRange |> collect
+
+#     lo_halo_start, lo_halo_end = A.local_indices[dim].lo_halo
+#     hi_halo_start, hi_halo_end = A.local_indices[dim].hi_halo
+
+#     lo_view_dims[dim] = lo_halo_start:lo_halo_end
+#     hi_view_dims[dim] = hi_halo_start:hi_halo_end
+
+#     lo_view = @view A[lo_view_dims...]
+#     hi_view = @view A[hi_view_dims...]
+
+#     return lo_view, hi_view
+# end
+
+# function domain_edge_view(A::MPIHaloArray, dim, hi_or_low)
+# end
+
+"""
+    local_domain_indices(A::MPIHaloArray)
+
+Get the array indices of the domain region of `A` (i.e. excluding halo regions) in the local 
+frame of reference (relative to itself, rather than in the global domain). This is
+typically 1 to size(A). The order of the returned indices is (ilo, ihi, jlo, jhi, ...).
+
+# Returns
+ - `NTuple{Int, 2 * NDimensions}` : A tuple of both lo and hi indices for each dimension
+"""
+function local_domain_indices(A::MPIHaloArray)
      getindices(A.local_indices)
 end
 
-function globalindices(A::MPIHaloArray)
+"""
+    local_domain_indices(A::MPIHaloArray)
+
+Get the array indices of the domain region of `A` (i.e. excluding halo regions) in the global 
+frame of reference. The order of the returned indices is (ilo, ihi, jlo, jhi, ...).
+
+# Returns
+ - `NTuple{Int, 2 * NDimensions}` : A tuple of both lo and hi indices for each dimension
+"""
+function global_domain_indices(A::MPIHaloArray)
      getindices(A.global_indices)
 end
 
+"""
+A reusable helper function that gathers the indices of the `MPIHaloArray`.
+"""
 function getindices(dataindices)
     indices = zeros(Int, 2length(dataindices))
 
     for dim in 1:length(dataindices)
-        lo, hi = dataindices[dim].domain
+        lo, hi = domainindices(dataindices[dim])
         indices[2(dim - 1) + 1] = lo
         indices[2(dim - 1) + 2] = hi
     end
@@ -263,10 +305,19 @@ function getindices(dataindices)
     return tuple(indices...)
 end
 
+"""
+
+Get the `lo` indicies along the specified dimension `dim` of `A`. This will be in order of
+(lo_halo_start, lo_halo_end, lo_domain_start, lo_domain_end).
+"""
 @inline function lo_indices(A::MPIHaloArray, dim)
     lo_indices(A.data, dim, A.nhalo)
 end
 
+"""
+Get the `ho` indicies along the specified dimension `dim` of `A`. This will be in order of
+(hi_domain_start, hi_domain_end, hi_halo_start, hi_halo_end).
+"""
 @inline function hi_indices(A::MPIHaloArray, dim)
     hi_indices(A.data, dim, A.nhalo)
 end
