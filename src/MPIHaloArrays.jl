@@ -29,8 +29,8 @@ MPIHaloArray
  - `coords` : Vector{Int} - Coordinates in the global MPI space
  - `rank`: Current MPI rank
 """
-mutable struct MPIHaloArray{T,N,NN} <: AbstractArray{T,N}
-    data::AbstractArray{T,N}
+mutable struct MPIHaloArray{T,N,AA<:AbstractArray{T,N},NN} <: AbstractArray{T,N}
+    data::AA
     nhalo::Int
     rank::Int
     topology::CartesianTopology
@@ -43,7 +43,7 @@ end
 
 include("utils/indexing.jl")
 include("updatehalo.jl")
-include("scattergather.jl")
+# include("scattergather.jl")
 include("ops.jl")
 
 """MPIHaloArray constructor
