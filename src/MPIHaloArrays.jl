@@ -44,7 +44,7 @@ end
 
 include("utils/indexing.jl")
 include("updatehalo.jl")
-# include("scattergather.jl")
+include("scattergather.jl")
 include("ops.jl")
 
 """MPIHaloArray constructor
@@ -266,7 +266,7 @@ end
 """
     local_domain_indices(A::MPIHaloArray)
 
-Get the array indices of the domain region of `A` (i.e. excluding halo regions) in the local 
+Get the array indices of the domain region of `A` (i.e. excluding halo regions) in the local
 frame of reference (relative to itself, rather than in the global domain). This is
 typically 1 to size(A). The order of the returned indices is (ilo, ihi, jlo, jhi, ...).
 
@@ -280,7 +280,7 @@ end
 """
     local_domain_indices(A::MPIHaloArray)
 
-Get the array indices of the domain region of `A` (i.e. excluding halo regions) in the global 
+Get the array indices of the domain region of `A` (i.e. excluding halo regions) in the global
 frame of reference. The order of the returned indices is (ilo, ihi, jlo, jhi, ...).
 
 # Returns

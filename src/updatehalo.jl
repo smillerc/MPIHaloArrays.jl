@@ -1,228 +1,228 @@
-"""Sync the edges of the array `A` with it's neighbors"""
-function sync_edges_rma!(A::MPIHaloArray{T,1}) where {T}
-    ilo_halo_start, ilo_halo_end = A.local_indices[1].lo_halo
-    ihi_halo_start, ihi_halo_end = A.local_indices[1].hi_halo
-    ilo_dom_start, ilo_dom_end = A.local_indices[1].lo_halo_domain_donor
-    ihi_dom_start, ihi_dom_end = A.local_indices[1].hi_halo_domain_donor
+# """Sync the edges of the array `A` with it's neighbors"""
+# function sync_edges_rma!(A::MPIHaloArray{T,1}) where {T}
+#     ilo_halo_start, ilo_halo_end = A.local_indices[1].lo_halo
+#     ihi_halo_start, ihi_halo_end = A.local_indices[1].hi_halo
+#     ilo_dom_start, ilo_dom_end = A.local_indices[1].lo_halo_domain_donor
+#     ihi_dom_start, ihi_dom_end = A.local_indices[1].hi_halo_domain_donor
 
-    # Create the halo region views
-    ilo_edge = @view A.data[ilo_dom_start:ilo_dom_end]
-    ihi_edge = @view A.data[ihi_dom_start:ihi_dom_end]
-    # ilo_halo_edge = @view A.data[ilo_halo_start:ilo_halo_end]
+#     # Create the halo region views
+#     ilo_edge = @view A.data[ilo_dom_start:ilo_dom_end]
+#     ihi_edge = @view A.data[ihi_dom_start:ihi_dom_end]
+#     # ilo_halo_edge = @view A.data[ilo_halo_start:ilo_halo_end]
 
-    # Define the positions w/in the window for Get/Put operations
-    LI = LinearIndices(A.data)
-    ilo_halo_pos = LI[ilo_halo_start]
-    ihi_halo_pos = LI[ihi_halo_start]
+#     # Define the positions w/in the window for Get/Put operations
+#     LI = LinearIndices(A.data)
+#     ilo_halo_pos = LI[ilo_halo_start]
+#     ihi_halo_pos = LI[ihi_halo_start]
 
-    # Create the MPI subarray buffers for transfer
-    ilo_buf = MPI.Buffer(ilo_edge)
-    ihi_buf = MPI.Buffer(ihi_edge)
+#     # Create the MPI subarray buffers for transfer
+#     ilo_buf = MPI.Buffer(ilo_edge)
+#     ihi_buf = MPI.Buffer(ihi_edge)
 
-    # Halo exchange
-    ilo_neighbor_proc = ilo_neighbor(A.topology)
-    ihi_neighbor_proc = ihi_neighbor(A.topology)
+#     # Halo exchange
+#     ilo_neighbor_proc = ilo_neighbor(A.topology)
+#     ihi_neighbor_proc = ihi_neighbor(A.topology)
 
-    ilo_to_ihi_halo_disp = ihi_halo_pos - ilo_halo_pos
-    ihi_to_ilo_halo_disp = 0
+#     ilo_to_ihi_halo_disp = ihi_halo_pos - ilo_halo_pos
+#     ihi_to_ilo_halo_disp = 0
 
-    # if A.topology.rank == 1
-    #     @show ilo_edge_pos, ihi_edge_pos, ilo_halo_pos, ihi_halo_pos
-    #     @show ihi_halo_pos - ilo_dom_start + 2
-    # end
+#     # if A.topology.rank == 1
+#     #     @show ilo_edge_pos, ihi_edge_pos, ilo_halo_pos, ihi_halo_pos
+#     #     @show ihi_halo_pos - ilo_dom_start + 2
+#     # end
 
-    win = MPI.Win_create(A.data, A.topology.comm)
-    MPI.Win_fence(0, win)
-    MPI.Put(ilo_buf, ilo_neighbor_proc, ilo_to_ihi_halo_disp, win) # ihi halo update
-    MPI.Put(ihi_buf, ihi_neighbor_proc, ihi_to_ilo_halo_disp, win) # ilo halo update
-    MPI.Win_fence(0, win)
+#     win = MPI.Win_create(A.data, A.topology.comm)
+#     MPI.Win_fence(0, win)
+#     MPI.Put(ilo_buf, ilo_neighbor_proc, ilo_to_ihi_halo_disp, win) # ihi halo update
+#     MPI.Put(ihi_buf, ihi_neighbor_proc, ihi_to_ilo_halo_disp, win) # ilo halo update
+#     MPI.Win_fence(0, win)
 
-    return nothing
-end
+#     return nothing
+# end
 
-function sync_edges_rma!(A::MPIHaloArray{T,2}) where {T}
-    ilo_halo_start, ilo_halo_end = A.local_indices[1].lo_halo
-    ihi_halo_start, ihi_halo_end = A.local_indices[1].hi_halo
-    ilo_dom_start, ilo_dom_end = A.local_indices[1].lo_halo_domain_donor
-    ihi_dom_start, ihi_dom_end = A.local_indices[1].hi_halo_domain_donor
+# function sync_edges_rma!(A::MPIHaloArray{T,2}) where {T}
+#     ilo_halo_start, ilo_halo_end = A.local_indices[1].lo_halo
+#     ihi_halo_start, ihi_halo_end = A.local_indices[1].hi_halo
+#     ilo_dom_start, ilo_dom_end = A.local_indices[1].lo_halo_domain_donor
+#     ihi_dom_start, ihi_dom_end = A.local_indices[1].hi_halo_domain_donor
 
-    jlo_halo_start, jlo_halo_end = A.local_indices[2].lo_halo
-    jhi_halo_start, jhi_halo_end = A.local_indices[2].hi_halo
-    jlo_dom_start, jlo_dom_end = A.local_indices[2].lo_halo_domain_donor
-    jhi_dom_start, jhi_dom_end = A.local_indices[2].hi_halo_domain_donor
+#     jlo_halo_start, jlo_halo_end = A.local_indices[2].lo_halo
+#     jhi_halo_start, jhi_halo_end = A.local_indices[2].hi_halo
+#     jlo_dom_start, jlo_dom_end = A.local_indices[2].lo_halo_domain_donor
+#     jhi_dom_start, jhi_dom_end = A.local_indices[2].hi_halo_domain_donor
 
-    # Create the halo region views
-    ilo_edge = @view A.data[ilo_dom_start:ilo_dom_end, jlo:jhi]
-    ihi_edge = @view A.data[ihi_dom_start:ihi_dom_end, jlo:jhi]
-    jlo_edge = @view A.data[ilo:ihi, jlo_dom_start:jlo_dom_end]
+#     # Create the halo region views
+#     ilo_edge = @view A.data[ilo_dom_start:ilo_dom_end, jlo:jhi]
+#     ihi_edge = @view A.data[ihi_dom_start:ihi_dom_end, jlo:jhi]
+#     jlo_edge = @view A.data[ilo:ihi, jlo_dom_start:jlo_dom_end]
 
-    ilojlo_corner = @view A.data[ilo_dom_start:ilo_dom_end, jlo_dom_start:jlo_dom_end]
-    ilojhi_corner = @view A.data[ilo_dom_start:ilo_dom_end, jhi_dom_start:jhi_dom_end]
+#     ilojlo_corner = @view A.data[ilo_dom_start:ilo_dom_end, jlo_dom_start:jlo_dom_end]
+#     ilojhi_corner = @view A.data[ilo_dom_start:ilo_dom_end, jhi_dom_start:jhi_dom_end]
 
-    ilo_halo_edge = @view A.data[ilo_halo_start:ilo_halo_end, jlo:jhi]
-    ihi_halo_edge = @view A.data[ihi_halo_start:ihi_halo_end, jlo:jhi]
-    jlo_halo_edge = @view A.data[ilo:ihi, jlo_halo_start:jlo_halo_end]
+#     ilo_halo_edge = @view A.data[ilo_halo_start:ilo_halo_end, jlo:jhi]
+#     ihi_halo_edge = @view A.data[ihi_halo_start:ihi_halo_end, jlo:jhi]
+#     jlo_halo_edge = @view A.data[ilo:ihi, jlo_halo_start:jlo_halo_end]
 
-    ilojlo_halo_corner = @view A.data[ilo_halo_start:ilo_halo_end, jlo_halo_start:jlo_halo_end]
-    ilojhi_halo_corner = @view A.data[ilo_halo_start:ilo_halo_end, jhi_halo_start:jhi_halo_end]
+#     ilojlo_halo_corner = @view A.data[ilo_halo_start:ilo_halo_end, jlo_halo_start:jlo_halo_end]
+#     ilojhi_halo_corner = @view A.data[ilo_halo_start:ilo_halo_end, jhi_halo_start:jhi_halo_end]
 
-    # Define the positions w/in the window for Get/Put operations
-    LI = LinearIndices(A.data)
-    ilo_edge_pos = LI[ilo_dom_start, jlo_dom_start]
-    jlo_edge_pos = LI[ilo_dom_start, jlo_dom_start]
-    ilojlo_corner_pos = LI[ilo_dom_start, jlo_dom_start]
-    ilojhi_corner_pos = LI[ilo_dom_start, jhi_dom_start]
+#     # Define the positions w/in the window for Get/Put operations
+#     LI = LinearIndices(A.data)
+#     ilo_edge_pos = LI[ilo_dom_start, jlo_dom_start]
+#     jlo_edge_pos = LI[ilo_dom_start, jlo_dom_start]
+#     ilojlo_corner_pos = LI[ilo_dom_start, jlo_dom_start]
+#     ilojhi_corner_pos = LI[ilo_dom_start, jhi_dom_start]
 
-    ihi_halo_pos = LI[ihi_halo_start, jlo_dom_start]
-    jhi_halo_pos = LI[ilo_dom_start, jhi_halo_start]
-    ihijhi_halo_pos = LI[ihi_halo_start, jhi_halo_start]
-    ihijlo_halo_pos = LI[ihi_halo_start, jlo_halo_start]
+#     ihi_halo_pos = LI[ihi_halo_start, jlo_dom_start]
+#     jhi_halo_pos = LI[ilo_dom_start, jhi_halo_start]
+#     ihijhi_halo_pos = LI[ihi_halo_start, jhi_halo_start]
+#     ihijlo_halo_pos = LI[ihi_halo_start, jlo_halo_start]
 
-    ihijhi_corner_pos = LI[ihi_dom_start, jhi_dom_start]
+#     ihijhi_corner_pos = LI[ihi_dom_start, jhi_dom_start]
 
-    # Create the MPI subarray buffers for transfer
-    ilo_buf = MPI.Buffer(ilo_edge)
-    ihi_buf = MPI.Buffer(ihi_edge)
-    jlo_buf = MPI.Buffer(jlo_edge)
-    ilojlo_corner_buf = MPI.Buffer(ilojlo_corner)
-    ilojhi_corner_buf = MPI.Buffer(ilojhi_corner)
+#     # Create the MPI subarray buffers for transfer
+#     ilo_buf = MPI.Buffer(ilo_edge)
+#     ihi_buf = MPI.Buffer(ihi_edge)
+#     jlo_buf = MPI.Buffer(jlo_edge)
+#     ilojlo_corner_buf = MPI.Buffer(ilojlo_corner)
+#     ilojhi_corner_buf = MPI.Buffer(ilojhi_corner)
 
-    ilo_halo_buf = MPI.Buffer(ilo_halo_edge)
-    ihi_halo_buf = MPI.Buffer(ihi_halo_edge)
-    jlo_halo_buf = MPI.Buffer(jlo_halo_edge)
+#     ilo_halo_buf = MPI.Buffer(ilo_halo_edge)
+#     ihi_halo_buf = MPI.Buffer(ihi_halo_edge)
+#     jlo_halo_buf = MPI.Buffer(jlo_halo_edge)
 
-    ilojlo_halo_buf = MPI.Buffer(ilojlo_halo_corner)
-    ilojhi_halo_buf = MPI.Buffer(ilojhi_halo_corner)
+#     ilojlo_halo_buf = MPI.Buffer(ilojlo_halo_corner)
+#     ilojhi_halo_buf = MPI.Buffer(ilojhi_halo_corner)
 
-    # Calculate the offset to move the buffers
-    ilo_to_ihi_halo = ihi_halo_pos - ilo_edge_pos
-    ihi_halo_to_ilo = ihi_halo_pos - ilo_edge_pos
+#     # Calculate the offset to move the buffers
+#     ilo_to_ihi_halo = ihi_halo_pos - ilo_edge_pos
+#     ihi_halo_to_ilo = ihi_halo_pos - ilo_edge_pos
 
-    ihijhi_halo_to_ilo_jlo_corner = ihijhi_halo_pos - ilojlo_corner_pos
-    ihijlo_halo_to_ilo_jhi_corner = ihijlo_halo_pos - ilojhi_corner_pos
+#     ihijhi_halo_to_ilo_jlo_corner = ihijhi_halo_pos - ilojlo_corner_pos
+#     ihijlo_halo_to_ilo_jhi_corner = ihijlo_halo_pos - ilojhi_corner_pos
 
-    ihijhi_to_ilojlo_halo = ihijhi_corner_pos - ilojlo_corner_pos
+#     ihijhi_to_ilojlo_halo = ihijhi_corner_pos - ilojlo_corner_pos
 
-    jlo_to_jhi_halo = jhi_halo_pos - jlo_edge_pos
-    jhi_halo_to_jlo = jhi_halo_pos - jlo_edge_pos
-    # Halo exchange
-    ilo_neighbor_proc = ilo_neighbor(A.topology)
-    ihi_neighbor_proc = ihi_neighbor(A.topology)
-    jlo_neighbor_proc = jlo_neighbor(A.topology)
-
-
-    ilojlo_neighbor_proc = neighbor(A.topology, -1, -1)
-    ilojhi_neighbor_proc = neighbor(A.topology, -1, +1)
-
-    win = MPI.Win_create(A.data, A.topology.comm)
-    MPI.Win_fence(0, win)
-
-    # MPI.Get(ihi_halo_buf, ihi_neighbor_proc, 2, win) # ilo halo update
-    # lo halo update: Get the hi edge from the lo neighbor and put it in the lo halo edge
-
-    # Get the hi halo edge from the lo neighbor and put it in the lo halo edge of the current rank
-    MPI.Get(ilo_halo_buf, ilo_neighbor_proc, ihi_halo_to_ilo, win) # ilo halo update
-    MPI.Get(jlo_halo_buf, jlo_neighbor_proc, jhi_halo_to_jlo, win) # jlo halo update
-    MPI.Get(ilojlo_halo_buf, ilojlo_neighbor_proc, ihijhi_to_ilojlo_halo, win) # ilojlo corner halo update
-
-    # Put the lo edge (on current rank) on the halo edge of the hi rank
-    # MPI.Put(ilo_buf, ilo_neighbor_proc, ilo_to_ihi_halo, win) # ihi halo update
-    # MPI.Put(jlo_buf, jlo_neighbor_proc, jlo_to_jhi_halo, win) # jhi halo update
+#     jlo_to_jhi_halo = jhi_halo_pos - jlo_edge_pos
+#     jhi_halo_to_jlo = jhi_halo_pos - jlo_edge_pos
+#     # Halo exchange
+#     ilo_neighbor_proc = ilo_neighbor(A.topology)
+#     ihi_neighbor_proc = ihi_neighbor(A.topology)
+#     jlo_neighbor_proc = jlo_neighbor(A.topology)
 
 
-    # MPI.Get(ilojhi_halo_buf, ilojhi_neighbor_proc, ihijlo_halo_to_ilo_jhi_corner, win) # ilojhi corner halo update
-    # MPI.Put(ilojlo_corner_buf, ilojlo_neighbor_proc, jlo_to_jhi_halo, win) # jhi corner halo update
-    # MPI.Put(ilojhi_corner_buf, ilojhi_neighbor_proc, ilo_to_ihi_halo, win) # ihi corner halo update
+#     ilojlo_neighbor_proc = neighbor(A.topology, -1, -1)
+#     ilojhi_neighbor_proc = neighbor(A.topology, -1, +1)
 
-    MPI.Win_fence(0, win)
+#     win = MPI.Win_create(A.data, A.topology.comm)
+#     MPI.Win_fence(0, win)
 
-    return nothing
-end
+#     # MPI.Get(ihi_halo_buf, ihi_neighbor_proc, 2, win) # ilo halo update
+#     # lo halo update: Get the hi edge from the lo neighbor and put it in the lo halo edge
 
-function sync_edges_rma!(A::MPIHaloArray{T,3}) where {T}
-    ilo_halo_start, ilo_halo_end = A.local_indices[1].lo_halo
-    ihi_halo_start, ihi_halo_end = A.local_indices[1].hi_halo
-    ilo_dom_start, ilo_dom_end = A.local_indices[1].lo_halo_domain_donor
-    ihi_dom_start, ihi_dom_end = A.local_indices[1].hi_halo_domain_donor
+#     # Get the hi halo edge from the lo neighbor and put it in the lo halo edge of the current rank
+#     MPI.Get(ilo_halo_buf, ilo_neighbor_proc, ihi_halo_to_ilo, win) # ilo halo update
+#     MPI.Get(jlo_halo_buf, jlo_neighbor_proc, jhi_halo_to_jlo, win) # jlo halo update
+#     MPI.Get(ilojlo_halo_buf, ilojlo_neighbor_proc, ihijhi_to_ilojlo_halo, win) # ilojlo corner halo update
 
-    jlo_halo_start, jlo_halo_end = A.local_indices[2].lo_halo
-    jhi_halo_start, jhi_halo_end = A.local_indices[2].hi_halo
-    jlo_dom_start, jlo_dom_end = A.local_indices[2].lo_halo_domain_donor
-    jhi_dom_start, jhi_dom_end = A.local_indices[2].hi_halo_domain_donor
+#     # Put the lo edge (on current rank) on the halo edge of the hi rank
+#     # MPI.Put(ilo_buf, ilo_neighbor_proc, ilo_to_ihi_halo, win) # ihi halo update
+#     # MPI.Put(jlo_buf, jlo_neighbor_proc, jlo_to_jhi_halo, win) # jhi halo update
 
-    klo_halo_start, klo_halo_end = A.local_indices[3].lo_halo
-    khi_halo_start, khi_halo_end = A.local_indices[3].hi_halo
-    klo_dom_start, klo_dom_end = A.local_indices[3].lo_halo_domain_donor
-    khi_dom_start, khi_dom_end = A.local_indices[3].hi_halo_domain_donor
 
-    # Edge donor views
-    ilo_edge = @view A.data[ilo_dom_start:ilo_dom_end, jlo:jhi, klo:khi]
-    jlo_edge = @view A.data[ilo:ihi, jlo_dom_start:jlo_dom_end, klo:khi]
-    klo_edge = @view A.data[ilo_dom_start:ilo_dom_end, jlo:jhi, klo_dom_start:klo_dom_end]
+#     # MPI.Get(ilojhi_halo_buf, ilojhi_neighbor_proc, ihijlo_halo_to_ilo_jhi_corner, win) # ilojhi corner halo update
+#     # MPI.Put(ilojlo_corner_buf, ilojlo_neighbor_proc, jlo_to_jhi_halo, win) # jhi corner halo update
+#     # MPI.Put(ilojhi_corner_buf, ilojhi_neighbor_proc, ilo_to_ihi_halo, win) # ihi corner halo update
 
-    # Create the halo region views
-    ilo_halo_edge = @view A.data[ilo_halo_start:ilo_halo_end, jlo:jhi, klo:khi]
-    jlo_halo_edge = @view A.data[ilo:ihi, jlo_halo_start:jlo_halo_end, klo:khi]
-    klo_halo_edge = @view A.data[ilo:ihi, jlo:jhi, klo_halo_start:klo_halo_end]
+#     MPI.Win_fence(0, win)
 
-    # Define the positions w/in the window for Get/Put operations
-    LI = LinearIndices(A.data)
-    ilo_edge_pos = LI[ilo_dom_start, jlo_dom_start, klo_dom_start]
-    jlo_edge_pos = LI[ilo_dom_start, jlo_dom_start, klo_dom_start]
-    klo_edge_pos = LI[ilo_dom_start, jlo_dom_start, klo_dom_start]
+#     return nothing
+# end
 
-    ihi_halo_pos = LI[ihi_halo_start, jlo_dom_start, klo_dom_start]
-    jhi_halo_pos = LI[ilo_dom_start, jhi_halo_start, klo_dom_start]
-    khi_halo_pos = LI[ilo_dom_start, jhi_dom_start, klo_halo_start]
+# function sync_edges_rma!(A::MPIHaloArray{T,3}) where {T}
+#     ilo_halo_start, ilo_halo_end = A.local_indices[1].lo_halo
+#     ihi_halo_start, ihi_halo_end = A.local_indices[1].hi_halo
+#     ilo_dom_start, ilo_dom_end = A.local_indices[1].lo_halo_domain_donor
+#     ihi_dom_start, ihi_dom_end = A.local_indices[1].hi_halo_domain_donor
 
-    if A.topology.rank == 0
-        @show ihi_halo_pos, ilo_edge_pos
-        @show jhi_halo_pos, jlo_edge_pos
-        @show khi_halo_pos, klo_edge_pos
-    end
-    # Create the MPI subarray buffers for transfer
-    ilo_buf = MPI.Buffer(ilo_edge)
-    jlo_buf = MPI.Buffer(jlo_edge)
-    klo_buf = MPI.Buffer(klo_edge)
-    ilo_halo_buf = MPI.Buffer(ilo_halo_edge)
-    jlo_halo_buf = MPI.Buffer(jlo_halo_edge)
-    klo_halo_buf = MPI.Buffer(klo_halo_edge)
+#     jlo_halo_start, jlo_halo_end = A.local_indices[2].lo_halo
+#     jhi_halo_start, jhi_halo_end = A.local_indices[2].hi_halo
+#     jlo_dom_start, jlo_dom_end = A.local_indices[2].lo_halo_domain_donor
+#     jhi_dom_start, jhi_dom_end = A.local_indices[2].hi_halo_domain_donor
 
-    # Calculate the offset to move the buffers
-    ilo_ihi_disp = ihi_halo_pos - ilo_edge_pos
-    jlo_jhi_disp = jhi_halo_pos - jlo_edge_pos
-    klo_to_khi_halo = khi_halo_pos - klo_edge_pos
-    khi_halo_to_klo = khi_halo_pos - klo_edge_pos
+#     klo_halo_start, klo_halo_end = A.local_indices[3].lo_halo
+#     khi_halo_start, khi_halo_end = A.local_indices[3].hi_halo
+#     klo_dom_start, klo_dom_end = A.local_indices[3].lo_halo_domain_donor
+#     khi_dom_start, khi_dom_end = A.local_indices[3].hi_halo_domain_donor
 
-    # Halo exchange
-    ilo_neighbor_proc = ilo_neighbor(A.topology)
-    jlo_neighbor_proc = jlo_neighbor(A.topology)
-    klo_neighbor_proc = klo_neighbor(A.topology)
+#     # Edge donor views
+#     ilo_edge = @view A.data[ilo_dom_start:ilo_dom_end, jlo:jhi, klo:khi]
+#     jlo_edge = @view A.data[ilo:ihi, jlo_dom_start:jlo_dom_end, klo:khi]
+#     klo_edge = @view A.data[ilo_dom_start:ilo_dom_end, jlo:jhi, klo_dom_start:klo_dom_end]
 
-    win = MPI.Win_create(A.data, A.topology.comm)
-    MPI.Win_fence(0, win)
+#     # Create the halo region views
+#     ilo_halo_edge = @view A.data[ilo_halo_start:ilo_halo_end, jlo:jhi, klo:khi]
+#     jlo_halo_edge = @view A.data[ilo:ihi, jlo_halo_start:jlo_halo_end, klo:khi]
+#     klo_halo_edge = @view A.data[ilo:ihi, jlo:jhi, klo_halo_start:klo_halo_end]
 
-    # lo halo update: Get the hi edge from the lo neighbor and put it in the lo halo edge
-    MPI.Get(ilo_halo_buf, ilo_neighbor_proc, ilo_ihi_disp, win) # ilo
-    MPI.Get(jlo_halo_buf, jlo_neighbor_proc, jlo_jhi_disp, win) # jlo
-    # MPI.Get(klo_halo_buf, klo_neighbor_proc, khi_halo_to_klo, win) # klo
+#     # Define the positions w/in the window for Get/Put operations
+#     LI = LinearIndices(A.data)
+#     ilo_edge_pos = LI[ilo_dom_start, jlo_dom_start, klo_dom_start]
+#     jlo_edge_pos = LI[ilo_dom_start, jlo_dom_start, klo_dom_start]
+#     klo_edge_pos = LI[ilo_dom_start, jlo_dom_start, klo_dom_start]
 
-    # hi halo updates: Put the lo edge into the lo neighbor's hi halo edge
-    MPI.Put(ilo_buf, ilo_neighbor_proc, ilo_ihi_disp, win) # ihi
-    MPI.Put(jlo_buf, jlo_neighbor_proc, jlo_jhi_disp, win) # jhi
-    # MPI.Put(klo_buf, klo_neighbor_proc, klo_to_khi_halo, win) # khi
+#     ihi_halo_pos = LI[ihi_halo_start, jlo_dom_start, klo_dom_start]
+#     jhi_halo_pos = LI[ilo_dom_start, jhi_halo_start, klo_dom_start]
+#     khi_halo_pos = LI[ilo_dom_start, jhi_dom_start, klo_halo_start]
 
-    MPI.Win_fence(0, win)
+#     if A.topology.rank == 0
+#         @show ihi_halo_pos, ilo_edge_pos
+#         @show jhi_halo_pos, jlo_edge_pos
+#         @show khi_halo_pos, klo_edge_pos
+#     end
+#     # Create the MPI subarray buffers for transfer
+#     ilo_buf = MPI.Buffer(ilo_edge)
+#     jlo_buf = MPI.Buffer(jlo_edge)
+#     klo_buf = MPI.Buffer(klo_edge)
+#     ilo_halo_buf = MPI.Buffer(ilo_halo_edge)
+#     jlo_halo_buf = MPI.Buffer(jlo_halo_edge)
+#     klo_halo_buf = MPI.Buffer(klo_halo_edge)
 
-    return nothing
-end
+#     # Calculate the offset to move the buffers
+#     ilo_ihi_disp = ihi_halo_pos - ilo_edge_pos
+#     jlo_jhi_disp = jhi_halo_pos - jlo_edge_pos
+#     klo_to_khi_halo = khi_halo_pos - klo_edge_pos
+#     khi_halo_to_klo = khi_halo_pos - klo_edge_pos
+
+#     # Halo exchange
+#     ilo_neighbor_proc = ilo_neighbor(A.topology)
+#     jlo_neighbor_proc = jlo_neighbor(A.topology)
+#     klo_neighbor_proc = klo_neighbor(A.topology)
+
+#     win = MPI.Win_create(A.data, A.topology.comm)
+#     MPI.Win_fence(0, win)
+
+#     # lo halo update: Get the hi edge from the lo neighbor and put it in the lo halo edge
+#     MPI.Get(ilo_halo_buf, ilo_neighbor_proc, ilo_ihi_disp, win) # ilo
+#     MPI.Get(jlo_halo_buf, jlo_neighbor_proc, jlo_jhi_disp, win) # jlo
+#     # MPI.Get(klo_halo_buf, klo_neighbor_proc, khi_halo_to_klo, win) # klo
+
+#     # hi halo updates: Put the lo edge into the lo neighbor's hi halo edge
+#     MPI.Put(ilo_buf, ilo_neighbor_proc, ilo_ihi_disp, win) # ihi
+#     MPI.Put(jlo_buf, jlo_neighbor_proc, jlo_jhi_disp, win) # jhi
+#     # MPI.Put(klo_buf, klo_neighbor_proc, klo_to_khi_halo, win) # khi
+
+#     MPI.Win_fence(0, win)
+
+#     return nothing
+# end
 
 """
     updatehalo!(A::MPIHaloArray{T,N,1}) where {T,N}
 
 Update the halo regions on `A` where the halo exchage is done on a single dimension
 """
-function updatehalo!(A::MPIHaloArray{T,N,1}) where {T,N}
+function updatehalo!(A::MPIHaloArray{T,N,AA,1}) where {T,N,AA}
 
     ihalo_dim = A.halo_dims[1]
     ilo_halo_start, ilo_halo_end = A.local_indices[ihalo_dim].lo_halo
@@ -260,10 +260,10 @@ end
 
 """
     updatehalo!(A::MPIHaloArray{T,N,2}) where {T,N}
-    
+
 Update the halo regions on `A` where the halo exchage is done over 2 dimensions
 """
-function updatehalo!(A::MPIHaloArray{T,N,2}) where {T,N}
+function updatehalo!(A::MPIHaloArray{T,N,AA,2}) where {T,N,AA}
 
     first_halo_dim = first(A.halo_dims)
     last_halo_dim = last(A.halo_dims)
@@ -369,10 +369,10 @@ end
 
 """
     updatehalo!(A::MPIHaloArray{T,N,2}) where {T,N}
-    
+
 Update the halo regions on `A` where the halo exchage is done on over 3 dimensions
 """
-function updatehalo!(A::MPIHaloArray{T,N,3}) where {T,N}
+function updatehalo!(A::MPIHaloArray{T,N,AA,3}) where {T,N,AA}
 
     ihalo_dim = A.halo_dims[1]
     jhalo_dim = A.halo_dims[2]
@@ -664,4 +664,3 @@ function updatehalo!(A::MPIHaloArray{T,N,3}) where {T,N}
 
     return nothing
 end
-

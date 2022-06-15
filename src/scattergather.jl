@@ -140,7 +140,7 @@ that represents the global state.
  - `root`: MPI rank to gather `A` to
  - `halo_dims`: Tuple of the dimensions that halo exchanges occur on (not fully working yet)
 """
-function gatherglobal(A::MPIHaloArray{T, N, 1}; root=0) where {T, N}
+function gatherglobal(A::MPIHaloArray{T,N,AA,1}; root=0) where {T,N,AA}
 
     halo_dims = A.halo_dims
 
@@ -188,7 +188,7 @@ function gatherglobal(A::MPIHaloArray{T, N, 1}; root=0) where {T, N}
     return A_global
 end
 
-function gatherglobal(A::MPIHaloArray{T, N, 2}; root=0) where {T, N}
+function gatherglobal(A::MPIHaloArray{T,N,AA,2}; root=0) where {T,N,AA}
 
     halo_dims = A.halo_dims
 
@@ -237,7 +237,7 @@ function gatherglobal(A::MPIHaloArray{T, N, 2}; root=0) where {T, N}
     return A_global
 end
 
-function gatherglobal(A::MPIHaloArray{T, N, 3}; root=0) where {T, N}
+function gatherglobal(A::MPIHaloArray{T,N,AA,3}; root=0) where {T,N,AA}
 
     halo_dims = A.halo_dims
 
