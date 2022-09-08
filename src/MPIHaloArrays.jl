@@ -278,7 +278,7 @@ function local_domain_indices(A::MPIHaloArray)
 end
 
 """
-    local_domain_indices(A::MPIHaloArray)
+    global_domain_indices(A::MPIHaloArray)
 
 Get the array indices of the domain region of `A` (i.e. excluding halo regions) in the global
 frame of reference. The order of the returned indices is (ilo, ihi, jlo, jhi, ...).
