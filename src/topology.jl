@@ -119,7 +119,7 @@ function CartesianTopology(comm::MPI.Comm, dims::NTuple{N, Int}, periodicity::NT
     periodicity_tuple = vec_to_ntuple(periodicity)
     topo_dim = length(dims)
 
-    neighbors = OffsetArray(-ones(Int8,3,3,3), -1:1, -1:1, -1:1)
+    neighbors = OffsetArray(Int(MPI.API.MPI_PROC_NULL[]) * ones(Int8,3,3,3), -1:1, -1:1, -1:1)
 
     # MPI convention is (k, j, i), or (z, y, x) which is annoying
     if topo_dim == 1
@@ -264,7 +264,7 @@ function coord_to_rank(comm, dims, periods, coords)
     if isvalid
         rank = MPI.Cart_rank(comm, mpi_coords)
     else
-        rank = -1
+        rank = Int(MPI.API.MPI_PROC_NULL[])
     end
     rank
 end

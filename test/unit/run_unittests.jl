@@ -30,7 +30,7 @@ end
     file, nprocs = f
     mpiexec() do cmd
         # e.g. run `mpiexec -n 4 julia test_somthing.jl`
-        run(`$cmd -host localhost -n $nprocs $(Base.julia_cmd()) $(joinpath(testdir, file))`)
+        run(`$cmd -n $nprocs $(Base.julia_cmd()) $(joinpath(testdir, file))`)
         @test true
     end
 end

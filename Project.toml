@@ -10,7 +10,7 @@ MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195"
 OffsetArrays = "6fe1bfb0-de20-5000-8ca7-80f57d26f881"
 
 [compat]
-MPI = "0.19"
+MPI = "0.20"
 OffsetArrays = "1.10"
 julia = "1.6"
 EllipsisNotation = "1.3"
