@@ -8,6 +8,9 @@ const comm = MPI.COMM_WORLD
 const rank = MPI.Comm_rank(comm)
 const nprocs = MPI.Comm_size(comm)
 
+# Different MPI flavors have different NULL int conventions.
+const NULL_PROC = Int(MPI.API.MPI_PROC_NULL[])
+
 const ilo = -1
 const ihi = +1
 const i = 0
@@ -46,7 +49,7 @@ function test_16x1_topology_no_periodic()
 
     #  0  1  2  3  4  5  6  7  8  9  10  11  12  13  14  15
     if P.rank == 0 # test at edge
-        @test ilo_neighbor(P) == -1
+        @test ilo_neighbor(P) == NULL_PROC
         @test ihi_neighbor(P) == 1
 
     elseif P.rank == 5 # test a middle node
@@ -59,9 +62,9 @@ function test_4x4_topology_no_periodic()
     P = CartesianTopology(comm, [4,4], [false,false])
 
     if P.rank == 0 # test at edge
-        @test ilo_neighbor(P) == -1
+        @test ilo_neighbor(P) == NULL_PROC
         @test ihi_neighbor(P) == 1
-        @test jlo_neighbor(P) == -1
+        @test jlo_neighbor(P) == NULL_PROC
         @test jhi_neighbor(P) == 4
 
     elseif P.rank == 5 # test a middle node

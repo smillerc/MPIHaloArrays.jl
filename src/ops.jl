@@ -11,9 +11,9 @@ function globalsum(A::MPIHaloArray{T,N}; root=0, broadcast=false) where {T,N}
     localsum = sum(domainview(A))
 
     if broadcast
-        globalsum = MPI.Allreduce(localsum, MPI.MPI_SUM, A.topology.comm)
+        globalsum = MPI.Allreduce(localsum, MPI.SUM, A.topology.comm)
     else
-        globalsum = MPI.Reduce(localsum, MPI.MPI_SUM, root, A.topology.comm)
+        globalsum = MPI.Reduce(localsum, MPI.SUM, root, A.topology.comm)
     end
 
     globalsum
@@ -31,9 +31,9 @@ function globalmax(A::MPIHaloArray{T,N}; root=0, broadcast=false) where {T,N}
     localmax = maximum(domainview(A))
 
     if broadcast
-        globalmax = MPI.Allreduce(localmax, MPI.MPI_MAX, A.topology.comm)
+        globalmax = MPI.Allreduce(localmax, MPI.MAX, A.topology.comm)
     else
-        globalmax = MPI.Reduce(localmax, MPI.MPI_MAX, root, A.topology.comm)
+        globalmax = MPI.Reduce(localmax, MPI.MAX, root, A.topology.comm)
     end
     globalmax
 end
@@ -50,9 +50,9 @@ function globalmin(A::MPIHaloArray{T,N}; root=0, broadcast=false) where {T,N}
     localmin = minimum(domainview(A))
 
     if broadcast
-        globalmin = MPI.Allreduce(localmin, MPI.MPI_MIN, A.topology.comm)
+        globalmin = MPI.Allreduce(localmin, MPI.MIN, A.topology.comm)
     else
-        globalmin = MPI.Reduce(localmin, MPI.MPI_MIN, root, A.topology.comm)
+        globalmin = MPI.Reduce(localmin, MPI.MIN, root, A.topology.comm)
     end
     globalmin
 end

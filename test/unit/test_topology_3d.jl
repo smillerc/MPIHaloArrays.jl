@@ -7,6 +7,10 @@ MPI.Init()
 const comm = MPI.COMM_WORLD
 const rank = MPI.Comm_rank(comm)
 const nprocs = MPI.Comm_size(comm)
+
+# Different MPI flavors have different NULL int conventions.
+const NULL_PROC = Int(MPI.API.MPI_PROC_NULL[])
+
 const ilo = -1
 const ihi = +1
 const jlo = -1
@@ -109,35 +113,35 @@ function test_2x2x4_topology_no_periodic()
 
     if P.rank == 0
         # klo
-        @test neighbor(P, ilo, jlo, klo) == -1
-        @test neighbor(P, i  , jlo, klo) == -1
-        @test neighbor(P, ihi, jlo, klo) == -1
-        @test neighbor(P, ilo, j  , klo) == -1
-        @test neighbor(P, ihi, j  , klo) == -1
-        @test neighbor(P, ilo, jhi, klo) == -1
-        @test neighbor(P, i  , jhi, klo) == -1
-        @test neighbor(P, ihi, jhi, klo) == -1
+        @test neighbor(P, ilo, jlo, klo) == NULL_PROC
+        @test neighbor(P, i  , jlo, klo) == NULL_PROC
+        @test neighbor(P, ihi, jlo, klo) == NULL_PROC
+        @test neighbor(P, ilo, j  , klo) == NULL_PROC
+        @test neighbor(P, ihi, j  , klo) == NULL_PROC
+        @test neighbor(P, ilo, jhi, klo) == NULL_PROC
+        @test neighbor(P, i  , jhi, klo) == NULL_PROC
+        @test neighbor(P, ihi, jhi, klo) == NULL_PROC
 
         # k
-        @test ilo_neighbor(P) == -1
+        @test ilo_neighbor(P) == NULL_PROC
         @test ihi_neighbor(P) ==  1
-        @test jlo_neighbor(P) == -1
+        @test jlo_neighbor(P) == NULL_PROC
         @test jhi_neighbor(P) ==  2
-        @test klo_neighbor(P) == -1
+        @test klo_neighbor(P) == NULL_PROC
         @test khi_neighbor(P) ==  4
 
         @test neighbor(P, ihi, jhi, k) == 3
-        @test neighbor(P, ihi, jlo, k) == -1
-        @test neighbor(P, ilo, jlo, k) == -1
-        @test neighbor(P, ilo, jhi, k) == -1
+        @test neighbor(P, ihi, jlo, k) == NULL_PROC
+        @test neighbor(P, ilo, jlo, k) == NULL_PROC
+        @test neighbor(P, ilo, jhi, k) == NULL_PROC
 
         # khi
-        @test neighbor(P, ilo, jlo, khi) == -1
-        @test neighbor(P, i  , jlo, khi) == -1
-        @test neighbor(P, ihi, jlo, khi) == -1
-        @test neighbor(P, ilo, j  , khi) == -1
+        @test neighbor(P, ilo, jlo, khi) == NULL_PROC
+        @test neighbor(P, i  , jlo, khi) == NULL_PROC
+        @test neighbor(P, ihi, jlo, khi) == NULL_PROC
+        @test neighbor(P, ilo, j  , khi) == NULL_PROC
         @test neighbor(P, ihi, j  , khi) == 5
-        @test neighbor(P, ilo, jhi, khi) == -1
+        @test neighbor(P, ilo, jhi, khi) == NULL_PROC
         @test neighbor(P, i  , jhi, khi) == 6
         @test neighbor(P, ihi, jhi, khi) == 7
     end
