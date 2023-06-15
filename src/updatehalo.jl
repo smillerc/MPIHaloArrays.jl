@@ -218,7 +218,7 @@
 # end
 
 """
-    updatehalo!(A::MPIHaloArray{T,N,1}) where {T,N}
+    updatehalo!(A::MPIHaloArray{T,N,AA,1}) where {T,N,AA}
 
 Update the halo regions on `A` where the halo exchage is done on a single dimension
 """
@@ -248,18 +248,27 @@ function updatehalo!(A::MPIHaloArray{T,N,AA,1}) where {T,N,AA}
 
     comm = A.topology.comm
 
-    ihi_rreq = MPI.Irecv!(ihi_halo_buf, ihi_neighbor_proc, 1001, comm)
-    ilo_rreq = MPI.Irecv!(ilo_halo_buf, ilo_neighbor_proc, 1002, comm)
-    ihi_sreq = MPI.Isend(ilo_edge_buf, ilo_neighbor_proc, 1001, comm)
-    ilo_sreq = MPI.Isend(ihi_edge_buf, ihi_neighbor_proc, 1002, comm)
+    send_rec_req = Vector{MPI.Request}(undef, 0)
 
-    stats = MPI.Waitall!([ihi_rreq, ihi_sreq, ilo_rreq, ilo_sreq])
+    if ihi_neighbor_proc > -1
+        ihi_rreq = MPI.Irecv!(ihi_halo_buf, ihi_neighbor_proc, 1001, comm)
+        ilo_sreq = MPI.Isend(ihi_edge_buf, ihi_neighbor_proc, 1002, comm)
+        push!(send_rec_req, ihi_rreq, ilo_sreq)
+    end
+
+    if ilo_neighbor_proc > -1
+        ilo_rreq = MPI.Irecv!(ilo_halo_buf, ilo_neighbor_proc, 1002, comm)
+        ihi_sreq = MPI.Isend(ilo_edge_buf, ilo_neighbor_proc, 1001, comm)
+        push!(send_rec_req, ilo_rreq, ihi_sreq)
+    end
+
+    MPI.Waitall!(send_rec_req)
 
     return nothing
 end
 
 """
-    updatehalo!(A::MPIHaloArray{T,N,2}) where {T,N}
+    updatehalo!(A::MPIHaloArray{T,N,AA,2}) where {T,N,AA}
 
 Update the halo regions on `A` where the halo exchage is done over 2 dimensions
 """
@@ -279,7 +288,6 @@ function updatehalo!(A::MPIHaloArray{T,N,AA,2}) where {T,N,AA}
     jhi_halo_start, jhi_halo_end = A.local_indices[last_halo_dim].hi_halo
     jlo_dom_start, jlo_dom_end = A.local_indices[last_halo_dim].lo_halo_domain_donor
     jhi_dom_start, jhi_dom_end = A.local_indices[last_halo_dim].hi_halo_domain_donor
-
 
     # Create the halo region views
     ilo_edge = @view A.data[.., ilo_dom_start:ilo_dom_end, jlo:jhi]
@@ -309,15 +317,30 @@ function updatehalo!(A::MPIHaloArray{T,N,AA,2}) where {T,N,AA}
 
     comm = A.topology.comm
 
-    ihi_rreq = MPI.Irecv!(ihi_halo_buf, ihi_neighbor_proc, 1001, comm)
-    ilo_rreq = MPI.Irecv!(ilo_halo_buf, ilo_neighbor_proc, 1002, comm)
-    jhi_rreq = MPI.Irecv!(jhi_halo_buf, jhi_neighbor_proc, 1003, comm)
-    jlo_rreq = MPI.Irecv!(jlo_halo_buf, jlo_neighbor_proc, 1004, comm)
+    send_rec_req = Vector{MPI.Request}(undef, 0)
+    if ihi_neighbor_proc > -1
+        ihi_rreq = MPI.Irecv!(ihi_halo_buf, ihi_neighbor_proc, 1001, comm)
+        ilo_sreq = MPI.Isend(ihi_edge_buf, ihi_neighbor_proc, 1002, comm)
+        push!(send_rec_req, ihi_rreq, ilo_sreq)
+    end
 
-    ihi_sreq = MPI.Isend(ilo_edge_buf, ilo_neighbor_proc, 1001, comm)
-    ilo_sreq = MPI.Isend(ihi_edge_buf, ihi_neighbor_proc, 1002, comm)
-    jhi_sreq = MPI.Isend(jlo_edge_buf, jlo_neighbor_proc, 1003, comm)
-    jlo_sreq = MPI.Isend(jhi_edge_buf, jhi_neighbor_proc, 1004, comm)
+    if ilo_neighbor_proc > -1
+        ilo_rreq = MPI.Irecv!(ilo_halo_buf, ilo_neighbor_proc, 1002, comm)
+        ihi_sreq = MPI.Isend(ilo_edge_buf, ilo_neighbor_proc, 1001, comm)
+        push!(send_rec_req, ilo_rreq, ihi_sreq)
+    end
+
+    if jhi_neighbor_proc > -1
+        jhi_rreq = MPI.Irecv!(jhi_halo_buf, jhi_neighbor_proc, 1003, comm)
+        jlo_sreq = MPI.Isend(jhi_edge_buf, jhi_neighbor_proc, 1004, comm)
+        push!(send_rec_req, jhi_rreq, jlo_sreq)
+    end
+
+    if jlo_neighbor_proc > -1
+        jlo_rreq = MPI.Irecv!(jlo_halo_buf, jlo_neighbor_proc, 1004, comm)
+        jhi_sreq = MPI.Isend(jlo_edge_buf, jlo_neighbor_proc, 1003, comm)
+        push!(send_rec_req, jlo_rreq, jhi_sreq)
+    end
 
     if A.do_corners
         ilojlo_corner = @view A.data[.., ilo_dom_start:ilo_dom_end, jlo_dom_start:jlo_dom_end]
@@ -343,26 +366,33 @@ function updatehalo!(A::MPIHaloArray{T,N,AA,2}) where {T,N,AA}
         ilojhi_neighbor_proc = neighbor(A.topology, -1, +1)
         ihijhi_neighbor_proc = neighbor(A.topology, +1, +1)
 
-        ilojlo_rreq = MPI.Irecv!(ilojlo_halo_buf, ilojlo_neighbor_proc, 1005, comm)
-        ihijhi_rreq = MPI.Irecv!(ihijhi_halo_buf, ihijhi_neighbor_proc, 1006, comm)
-        ihijlo_rreq = MPI.Irecv!(ihijlo_halo_buf, ihijlo_neighbor_proc, 1007, comm)
-        ilojhi_rreq = MPI.Irecv!(ilojhi_halo_buf, ilojhi_neighbor_proc, 1008, comm)
+        if ilojlo_neighbor_proc > -1
+            ilojlo_rreq = MPI.Irecv!(ilojlo_halo_buf, ilojlo_neighbor_proc, 1005, comm)
+            ihijhi_sreq = MPI.Isend(ilojlo_corner_buf, ilojlo_neighbor_proc, 1006, comm)
+            push!(send_rec_req, ilojlo_rreq, ihijhi_sreq)
+        end
 
-        ihijhi_sreq = MPI.Isend(ilojlo_corner_buf, ilojlo_neighbor_proc, 1006, comm)
-        ihijlo_sreq = MPI.Isend(ilojhi_corner_buf, ilojhi_neighbor_proc, 1007, comm)
-        ilojlo_sreq = MPI.Isend(ihijhi_corner_buf, ihijhi_neighbor_proc, 1005, comm)
-        ilojhi_sreq = MPI.Isend(ihijlo_corner_buf, ihijlo_neighbor_proc, 1008, comm)
+        if ihijhi_neighbor_proc > -1
+            ihijhi_rreq = MPI.Irecv!(ihijhi_halo_buf, ihijhi_neighbor_proc, 1006, comm)
+            ilojlo_sreq = MPI.Isend(ihijhi_corner_buf, ihijhi_neighbor_proc, 1005, comm)
+            push!(send_rec_req, ilojlo_sreq, ihijhi_rreq)
+        end
+
+        if ihijlo_neighbor_proc > -1
+            ihijlo_rreq = MPI.Irecv!(ihijlo_halo_buf, ihijlo_neighbor_proc, 1007, comm)
+            ilojhi_sreq = MPI.Isend(ihijlo_corner_buf, ihijlo_neighbor_proc, 1008, comm)
+            push!(send_rec_req, ihijlo_rreq, ilojhi_sreq)
+        end
+
+        if ilojhi_neighbor_proc > -1
+            ilojhi_rreq = MPI.Irecv!(ilojhi_halo_buf, ilojhi_neighbor_proc, 1008, comm)
+            ihijlo_sreq = MPI.Isend(ilojhi_corner_buf, ilojhi_neighbor_proc, 1007, comm)
+            push!(send_rec_req, ilojhi_rreq, ihijlo_sreq)
+        end
     end
 
-    if A.do_corners
-        stats = MPI.Waitall!([ihi_rreq, ihi_sreq, ilo_rreq, ilo_sreq,
-            jhi_rreq, jhi_sreq, jlo_rreq, jlo_sreq,
-            ilojlo_rreq, ihijlo_rreq, ilojhi_rreq, ihijhi_rreq,
-            ilojlo_sreq, ihijlo_sreq, ilojhi_sreq, ihijhi_sreq])
-    else
-        stats = MPI.Waitall!([ihi_rreq, ihi_sreq, ilo_rreq, ilo_sreq,
-            jhi_rreq, jhi_sreq, jlo_rreq, jlo_sreq])
-    end
+
+    MPI.Waitall!(send_rec_req)
 
     return nothing
 end
@@ -435,19 +465,43 @@ function updatehalo!(A::MPIHaloArray{T,N,AA,3}) where {T,N,AA}
 
     comm = A.topology.comm
 
-    ihi_rreq = MPI.Irecv!(ihi_halo_buf, ihi_neighbor_proc, 1001, comm)
-    ilo_rreq = MPI.Irecv!(ilo_halo_buf, ilo_neighbor_proc, 1002, comm)
-    jhi_rreq = MPI.Irecv!(jhi_halo_buf, jhi_neighbor_proc, 1003, comm)
-    jlo_rreq = MPI.Irecv!(jlo_halo_buf, jlo_neighbor_proc, 1004, comm)
-    khi_rreq = MPI.Irecv!(khi_halo_buf, khi_neighbor_proc, 1005, comm)
-    klo_rreq = MPI.Irecv!(klo_halo_buf, klo_neighbor_proc, 1006, comm)
+    send_rec_req = Vector{MPI.Request}(undef, 0)
 
-    ihi_sreq = MPI.Isend(ilo_edge_buf, ilo_neighbor_proc, 1001, comm)
-    ilo_sreq = MPI.Isend(ihi_edge_buf, ihi_neighbor_proc, 1002, comm)
-    jhi_sreq = MPI.Isend(jlo_edge_buf, jlo_neighbor_proc, 1003, comm)
-    jlo_sreq = MPI.Isend(jhi_edge_buf, jhi_neighbor_proc, 1004, comm)
-    khi_sreq = MPI.Isend(klo_edge_buf, klo_neighbor_proc, 1005, comm)
-    klo_sreq = MPI.Isend(khi_edge_buf, khi_neighbor_proc, 1006, comm)
+    if ihi_neighbor_proc > -1
+        ihi_rreq = MPI.Irecv!(ihi_halo_buf, ihi_neighbor_proc, 1001, comm)
+        ilo_sreq = MPI.Isend(ihi_edge_buf, ihi_neighbor_proc, 1002, comm)
+        push!(send_rec_req, ihi_rreq, ilo_sreq)
+    end
+
+    if ilo_neighbor_proc > -1
+        ilo_rreq = MPI.Irecv!(ilo_halo_buf, ilo_neighbor_proc, 1002, comm)
+        ihi_sreq = MPI.Isend(ilo_edge_buf, ilo_neighbor_proc, 1001, comm)
+        push!(send_rec_req, ilo_rreq, ihi_sreq)
+    end
+
+    if jhi_neighbor_proc > -1
+        jhi_rreq = MPI.Irecv!(jhi_halo_buf, jhi_neighbor_proc, 1003, comm)
+        jlo_sreq = MPI.Isend(jhi_edge_buf, jhi_neighbor_proc, 1004, comm)
+        push!(send_rec_req, jhi_rreq, jlo_sreq)
+    end
+
+    if jlo_neighbor_proc > -1
+        jlo_rreq = MPI.Irecv!(jlo_halo_buf, jlo_neighbor_proc, 1004, comm)
+        jhi_sreq = MPI.Isend(jlo_edge_buf, jlo_neighbor_proc, 1003, comm)
+        push!(send_rec_req, jlo_rreq, jhi_sreq)
+    end
+
+    if khi_neighbor_proc > -1
+        khi_rreq = MPI.Irecv!(khi_halo_buf, khi_neighbor_proc, 1005, comm)
+        klo_sreq = MPI.Isend(khi_edge_buf, khi_neighbor_proc, 1006, comm)
+        push!(send_rec_req, khi_rreq, klo_sreq)
+    end
+
+    if klo_neighbor_proc > -1
+        klo_rreq = MPI.Irecv!(klo_halo_buf, klo_neighbor_proc, 1006, comm)
+        khi_sreq = MPI.Isend(klo_edge_buf, klo_neighbor_proc, 1005, comm)
+        push!(send_rec_req, klo_rreq, khi_sreq)
+    end
 
     if A.do_corners
         jloklo_corner = @view A.data[.., ilo:ihi, jlo_dom_start:jlo_dom_end, klo_dom_start:klo_dom_end]
@@ -574,93 +628,129 @@ function updatehalo!(A::MPIHaloArray{T,N,AA,3}) where {T,N,AA}
         ihijlokhi_neighbor_proc = neighbor(A.topology, +1, -1, +1)
         ihijhikhi_neighbor_proc = neighbor(A.topology, +1, +1, +1)
 
-        ilojlo_rreq = MPI.Irecv!(ilojlo_halo_buf, ilojlo_neighbor_proc, 1007, comm)
-        ilojlo_sreq = MPI.Isend(ihijhi_corner_buf, ihijhi_neighbor_proc, 1007, comm)
+        if ilojlo_neighbor_proc > -1
+            ilojlo_rreq = MPI.Irecv!(ilojlo_halo_buf, ilojlo_neighbor_proc, 1007, comm)
+            ihijhi_sreq = MPI.Isend(ilojlo_corner_buf, ilojlo_neighbor_proc, 1008, comm)
+            push!(send_rec_req, ilojlo_rreq, ihijhi_sreq)
+        end
 
-        ihijhi_rreq = MPI.Irecv!(ihijhi_halo_buf, ihijhi_neighbor_proc, 1008, comm)
-        ihijhi_sreq = MPI.Isend(ilojlo_corner_buf, ilojlo_neighbor_proc, 1008, comm)
+        if ihijhi_neighbor_proc > -1
+            ihijhi_rreq = MPI.Irecv!(ihijhi_halo_buf, ihijhi_neighbor_proc, 1008, comm)
+            ilojlo_sreq = MPI.Isend(ihijhi_corner_buf, ihijhi_neighbor_proc, 1007, comm)
+            push!(send_rec_req, ihijhi_rreq, ilojlo_sreq)
+        end
 
-        ihijlo_rreq = MPI.Irecv!(ihijlo_halo_buf, ihijlo_neighbor_proc, 1009, comm)
-        ihijlo_sreq = MPI.Isend(ilojhi_corner_buf, ilojhi_neighbor_proc, 1009, comm)
+        if ilojhi_neighbor_proc > -1
+            ilojhi_rreq = MPI.Irecv!(ilojhi_halo_buf, ilojhi_neighbor_proc, 1010, comm)
+            ihijlo_sreq = MPI.Isend(ilojhi_corner_buf, ilojhi_neighbor_proc, 1009, comm)
+            push!(send_rec_req, ilojhi_rreq, ihijlo_sreq)
+        end
 
-        ilojhi_rreq = MPI.Irecv!(ilojhi_halo_buf, ilojhi_neighbor_proc, 1010, comm)
-        ilojhi_sreq = MPI.Isend(ihijlo_corner_buf, ihijlo_neighbor_proc, 1010, comm)
+        if ihijlo_neighbor_proc > -1
+            ihijlo_rreq = MPI.Irecv!(ihijlo_halo_buf, ihijlo_neighbor_proc, 1009, comm)
+            ilojhi_sreq = MPI.Isend(ihijlo_corner_buf, ihijlo_neighbor_proc, 1010, comm)
+            push!(send_rec_req, ihijlo_rreq, ilojhi_sreq)
+        end
+
+        if iloklo_neighbor_proc > -1
+            iloklo_halo_rreq = MPI.Irecv!(iloklo_halo_buf, iloklo_neighbor_proc, 1011, comm)
+            ihikhi_halo_sreq = MPI.Isend(iloklo_corner_buf, iloklo_neighbor_proc, 1014, comm)
+            push!(send_rec_req, iloklo_halo_rreq, ihikhi_halo_sreq)
+        end
+
+        if ihiklo_neighbor_proc > -1
+            ihiklo_halo_rreq = MPI.Irecv!(ihiklo_halo_buf, ihiklo_neighbor_proc, 1013, comm)
+            ilokhi_halo_sreq = MPI.Isend(ihiklo_corner_buf, ihiklo_neighbor_proc, 1012, comm)
+            push!(send_rec_req, ihiklo_halo_rreq, ilokhi_halo_sreq)
+        end
+
+        if ilokhi_neighbor_proc > -1
+            ilokhi_halo_rreq = MPI.Irecv!(ilokhi_halo_buf, ilokhi_neighbor_proc, 1012, comm)
+            ihiklo_halo_sreq = MPI.Isend(ilokhi_corner_buf, ilokhi_neighbor_proc, 1013, comm)
+            push!(send_rec_req, ilokhi_halo_rreq, ihiklo_halo_sreq)
+        end
+
+        if ihikhi_neighbor_proc > -1
+            ihikhi_halo_rreq = MPI.Irecv!(ihikhi_halo_buf, ihikhi_neighbor_proc, 1014, comm)
+            iloklo_halo_sreq = MPI.Isend(ihikhi_corner_buf, ihikhi_neighbor_proc, 1011, comm)
+            push!(send_rec_req, ihikhi_halo_rreq, iloklo_halo_sreq)
+        end
+
+        if jhikhi_neighbor_proc > -1
+            jhikhi_halo_rreq = MPI.Irecv!(jhikhi_halo_buf, jhikhi_neighbor_proc, 1018, comm)
+            jloklo_halo_sreq = MPI.Isend(jhikhi_corner_buf, jhikhi_neighbor_proc, 1015, comm)
+            push!(send_rec_req, jhikhi_halo_rreq, jloklo_halo_sreq)
+        end
+
+        if jhiklo_neighbor_proc > -1
+            jhiklo_halo_rreq = MPI.Irecv!(jhiklo_halo_buf, jhiklo_neighbor_proc, 1017, comm)
+            jlokhi_halo_sreq = MPI.Isend(jhiklo_corner_buf, jhiklo_neighbor_proc, 1016, comm)
+            push!(send_rec_req, jhiklo_halo_rreq, jlokhi_halo_sreq)
+        end
+
+        if jlokhi_neighbor_proc > -1
+            jlokhi_halo_rreq = MPI.Irecv!(jlokhi_halo_buf, jlokhi_neighbor_proc, 1016, comm)
+            jhiklo_halo_sreq = MPI.Isend(jlokhi_corner_buf, jlokhi_neighbor_proc, 1017, comm)
+            push!(send_rec_req, jlokhi_halo_rreq, jhiklo_halo_sreq)
+        end
+
+        if jloklo_neighbor_proc > -1
+            jloklo_halo_rreq = MPI.Irecv!(jloklo_halo_buf, jloklo_neighbor_proc, 1015, comm)
+            jhikhi_halo_sreq = MPI.Isend(jloklo_corner_buf, jloklo_neighbor_proc, 1018, comm)
+            push!(send_rec_req, jloklo_halo_rreq, jhikhi_halo_sreq)
+        end
 
 
+        if ihijhikhi_neighbor_proc > -1
+            ihijhikhi_rreq = MPI.Irecv!(ihijhikhi_halo_buf, ihijhikhi_neighbor_proc, 1026, comm)
+            ilojloklo_sreq = MPI.Isend(ihijhikhi_corner_buf, ihijhikhi_neighbor_proc, 1019, comm)
+            push!(send_rec_req, ihijhikhi_rreq, ilojloklo_sreq)
+        end
 
-        iloklo_halo_rreq = MPI.Irecv!(iloklo_halo_buf, iloklo_neighbor_proc, 1011, comm)
-        iloklo_halo_sreq = MPI.Isend(ihikhi_corner_buf, ihikhi_neighbor_proc, 1011, comm)
+        if ihijlokhi_neighbor_proc > -1
+            ihijlokhi_rreq = MPI.Irecv!(ihijlokhi_halo_buf, ihijlokhi_neighbor_proc, 1025, comm)
+            ilojhiklo_sreq = MPI.Isend(ihijlokhi_corner_buf, ihijlokhi_neighbor_proc, 1020, comm)
+            push!(send_rec_req, ihijlokhi_rreq, ilojhiklo_sreq)
+        end
 
-        ilokhi_halo_rreq = MPI.Irecv!(ilokhi_halo_buf, ilokhi_neighbor_proc, 1012, comm)
-        ilokhi_halo_sreq = MPI.Isend(ihiklo_corner_buf, ihiklo_neighbor_proc, 1012, comm)
+        if ilojhikhi_neighbor_proc > -1
+            ilojhikhi_rreq = MPI.Irecv!(ilojhikhi_halo_buf, ilojhikhi_neighbor_proc, 1024, comm)
+            ihijloklo_sreq = MPI.Isend(ilojhikhi_corner_buf, ilojhikhi_neighbor_proc, 1021, comm)
+            push!(send_rec_req, ilojhikhi_rreq, ihijloklo_sreq)
+        end
 
-        ihiklo_halo_rreq = MPI.Irecv!(ihiklo_halo_buf, ihiklo_neighbor_proc, 1013, comm)
-        ihiklo_halo_sreq = MPI.Isend(ilokhi_corner_buf, ilokhi_neighbor_proc, 1013, comm)
+        if ilojlokhi_neighbor_proc > -1
+            ilojlokhi_rreq = MPI.Irecv!(ilojlokhi_halo_buf, ilojlokhi_neighbor_proc, 1023, comm)
+            ihijhiklo_sreq = MPI.Isend(ilojlokhi_corner_buf, ilojlokhi_neighbor_proc, 1022, comm)
+            push!(send_rec_req, ilojlokhi_rreq, ihijhiklo_sreq)
+        end
 
-        ihikhi_halo_rreq = MPI.Irecv!(ihikhi_halo_buf, ihikhi_neighbor_proc, 1014, comm)
-        ihikhi_halo_sreq = MPI.Isend(iloklo_corner_buf, iloklo_neighbor_proc, 1014, comm)
+        if ihijhiklo_neighbor_proc > -1
+            ihijhiklo_rreq = MPI.Irecv!(ihijhiklo_halo_buf, ihijhiklo_neighbor_proc, 1022, comm)
+            ilojlokhi_sreq = MPI.Isend(ihijhiklo_corner_buf, ihijhiklo_neighbor_proc, 1023, comm)
+            push!(send_rec_req, ihijhiklo_rreq, ilojlokhi_sreq)
+        end
 
-        jloklo_halo_rreq = MPI.Irecv!(jloklo_halo_buf, jloklo_neighbor_proc, 1015, comm)
-        jloklo_halo_sreq = MPI.Isend(jhikhi_corner_buf, jhikhi_neighbor_proc, 1015, comm)
+        if ihijloklo_neighbor_proc > -1
+            ihijloklo_rreq = MPI.Irecv!(ihijloklo_halo_buf, ihijloklo_neighbor_proc, 1021, comm)
+            ilojhikhi_sreq = MPI.Isend(ihijloklo_corner_buf, ihijloklo_neighbor_proc, 1024, comm)
+            push!(send_rec_req, ihijloklo_rreq, ilojhikhi_sreq)
+        end
 
-        jlokhi_halo_rreq = MPI.Irecv!(jlokhi_halo_buf, jlokhi_neighbor_proc, 1016, comm)
-        jlokhi_halo_sreq = MPI.Isend(jhiklo_corner_buf, jhiklo_neighbor_proc, 1016, comm)
+        if ilojhiklo_neighbor_proc > -1
+            ilojhiklo_rreq = MPI.Irecv!(ilojhiklo_halo_buf, ilojhiklo_neighbor_proc, 1020, comm)
+            ihijlokhi_sreq = MPI.Isend(ilojhiklo_corner_buf, ilojhiklo_neighbor_proc, 1025, comm)
+            push!(send_rec_req, ilojhiklo_rreq, ihijlokhi_sreq)
+        end
 
-        jhiklo_halo_rreq = MPI.Irecv!(jhiklo_halo_buf, jhiklo_neighbor_proc, 1017, comm)
-        jhiklo_halo_sreq = MPI.Isend(jlokhi_corner_buf, jlokhi_neighbor_proc, 1017, comm)
-
-        jhikhi_halo_rreq = MPI.Irecv!(jhikhi_halo_buf, jhikhi_neighbor_proc, 1018, comm)
-        jhikhi_halo_sreq = MPI.Isend(jloklo_corner_buf, jloklo_neighbor_proc, 1018, comm)
-
-
-
-
-        ilojloklo_rreq = MPI.Irecv!(ilojloklo_halo_buf, ilojloklo_neighbor_proc, 1019, comm)
-        ilojloklo_sreq = MPI.Isend(ihijhikhi_corner_buf, ihijhikhi_neighbor_proc, 1019, comm)
-
-        ilojhiklo_rreq = MPI.Irecv!(ilojhiklo_halo_buf, ilojhiklo_neighbor_proc, 1020, comm)
-        ilojhiklo_sreq = MPI.Isend(ihijlokhi_corner_buf, ihijlokhi_neighbor_proc, 1020, comm)
-
-        ihijloklo_rreq = MPI.Irecv!(ihijloklo_halo_buf, ihijloklo_neighbor_proc, 1021, comm)
-        ihijloklo_sreq = MPI.Isend(ilojhikhi_corner_buf, ilojhikhi_neighbor_proc, 1021, comm)
-
-        ihijhiklo_rreq = MPI.Irecv!(ihijhiklo_halo_buf, ihijhiklo_neighbor_proc, 1022, comm)
-        ihijhiklo_sreq = MPI.Isend(ilojlokhi_corner_buf, ilojlokhi_neighbor_proc, 1022, comm)
-
-        ilojlokhi_rreq = MPI.Irecv!(ilojlokhi_halo_buf, ilojlokhi_neighbor_proc, 1023, comm)
-        ilojlokhi_sreq = MPI.Isend(ihijhiklo_corner_buf, ihijhiklo_neighbor_proc, 1023, comm)
-
-        ilojhikhi_rreq = MPI.Irecv!(ilojhikhi_halo_buf, ilojhikhi_neighbor_proc, 1024, comm)
-        ilojhikhi_sreq = MPI.Isend(ihijloklo_corner_buf, ihijloklo_neighbor_proc, 1024, comm)
-
-        ihijlokhi_rreq = MPI.Irecv!(ihijlokhi_halo_buf, ihijlokhi_neighbor_proc, 1025, comm)
-        ihijlokhi_sreq = MPI.Isend(ilojhiklo_corner_buf, ilojhiklo_neighbor_proc, 1025, comm)
-
-        ihijhikhi_rreq = MPI.Irecv!(ihijhikhi_halo_buf, ihijhikhi_neighbor_proc, 1026, comm)
-        ihijhikhi_sreq = MPI.Isend(ilojloklo_corner_buf, ilojloklo_neighbor_proc, 1026, comm)
+        if ilojloklo_neighbor_proc > -1
+            ilojloklo_rreq = MPI.Irecv!(ilojloklo_halo_buf, ilojloklo_neighbor_proc, 1019, comm)
+            ihijhikhi_sreq = MPI.Isend(ilojloklo_corner_buf, ilojloklo_neighbor_proc, 1026, comm)
+            push!(send_rec_req, ilojloklo_rreq, ihijhikhi_sreq)
+        end
     end
 
-    if A.do_corners
-        stats = MPI.Waitall!([ihi_rreq, ihi_sreq, ilo_rreq, ilo_sreq,
-            jhi_rreq, jhi_sreq, jlo_rreq, jlo_sreq,
-            khi_rreq, khi_sreq, klo_rreq, klo_sreq,
-            ilojlo_rreq, ilojlo_sreq, ihijhi_rreq, ihijhi_sreq,
-            ihijlo_rreq, ihijlo_sreq, ilojhi_rreq, ilojhi_sreq,
-            ilojloklo_rreq, ilojloklo_sreq, ilojhiklo_rreq, ilojhiklo_sreq,
-            ihijloklo_rreq, ihijloklo_sreq, ihijhiklo_rreq, ihijhiklo_sreq,
-            ilojlokhi_rreq, ilojlokhi_sreq, ilojhikhi_rreq, ilojhikhi_sreq,
-            ihijlokhi_rreq, ihijlokhi_sreq, ihijhikhi_rreq, ihijhikhi_sreq,
-            iloklo_halo_rreq, iloklo_halo_sreq, ilokhi_halo_rreq, ilokhi_halo_sreq,
-            ihiklo_halo_rreq, ihiklo_halo_sreq, ihikhi_halo_rreq, ihikhi_halo_sreq,
-            jloklo_halo_rreq, jloklo_halo_sreq, jlokhi_halo_rreq, jlokhi_halo_sreq,
-            jhiklo_halo_rreq, jhiklo_halo_sreq, jhikhi_halo_rreq, jhikhi_halo_sreq,
-        ])
-    else
-        stats = MPI.Waitall!([ihi_rreq, ihi_sreq, ilo_rreq, ilo_sreq,
-            jhi_rreq, jhi_sreq, jlo_rreq, jlo_sreq,
-            khi_rreq, khi_sreq, klo_rreq, klo_sreq,
-        ])
-    end
+    MPI.Waitall!(send_rec_req)
 
     return nothing
 end

@@ -7,6 +7,9 @@ const comm = MPI.COMM_WORLD
 const rank = MPI.Comm_rank(comm)
 const nprocs = MPI.Comm_size(comm)
 
+# Different MPI flavors have different NULL int conventions.
+const NULL_PROC = Int(MPI.API.MPI_PROC_NULL[])
+
 const ilo = -1
 const ihi = +1
 const jlo = -1
@@ -23,17 +26,17 @@ function test_4x4_topology_all_periodic()
     P = CartesianTopology(comm, [4,4], [true, true])
 
     # Layout for 4x4 domain; rank and (coords) are shown
-    
-    
+
+
     #   +----- (i)
     #   |
-    #   | 
+    #   |
     #   |  (j)
 
     #      ilo --> ihi
     #   |-------|-------|-------|-------|   jlo
     #   |       |       |       |       |    |
-    #   |   0   |   1   |   2   |   3   |    ↓   
+    #   |   0   |   1   |   2   |   3   |    ↓
     #   | (0,0) | (0,1) | (0,2) | (0,3) |   jhi
     #   |-------|-------|-------|-------|
     #   |       |       |       |       |
@@ -54,39 +57,39 @@ function test_4x4_topology_all_periodic()
         @test ihi_neighbor(P) == 1
         @test jlo_neighbor(P) == 12
         @test jhi_neighbor(P) == 4
-        @test klo_neighbor(P) == -1
-        @test khi_neighbor(P) == -1
+        @test klo_neighbor(P) == NULL_PROC
+        @test khi_neighbor(P) == NULL_PROC
 
         @test neighbor(P, ihi, jhi) == 5
-        @test neighbor(P, ihi, jlo) == 13  
-        @test neighbor(P, ilo, jhi) == 7  
-        @test neighbor(P, ilo, jlo) == 15  
+        @test neighbor(P, ihi, jlo) == 13
+        @test neighbor(P, ilo, jhi) == 7
+        @test neighbor(P, ilo, jlo) == 15
 
     elseif P.rank == 5 # test a middle node
         @test ilo_neighbor(P) == 4
         @test ihi_neighbor(P) == 6
         @test jlo_neighbor(P) == 1
         @test jhi_neighbor(P) == 9
-        @test klo_neighbor(P) == -1
-        @test khi_neighbor(P) == -1
-        
+        @test klo_neighbor(P) == NULL_PROC
+        @test khi_neighbor(P) == NULL_PROC
+
         @test neighbor(P, ihi, jhi) == 10
         @test neighbor(P, ihi, jlo) == 2
-        @test neighbor(P, ilo, jhi) == 8  
-        @test neighbor(P, ilo, jlo) == 0  
+        @test neighbor(P, ilo, jhi) == 8
+        @test neighbor(P, ilo, jlo) == 0
 
     elseif P.rank == 13 # test one on the edge
         @test ilo_neighbor(P) == 12
         @test ihi_neighbor(P) == 14
         @test jlo_neighbor(P) == 9
         @test jhi_neighbor(P) == 1
-        @test klo_neighbor(P) == -1
-        @test khi_neighbor(P) == -1
-        
+        @test klo_neighbor(P) == NULL_PROC
+        @test khi_neighbor(P) == NULL_PROC
+
         @test neighbor(P, ihi, jhi) == 2
         @test neighbor(P, ihi, jlo) == 10
         @test neighbor(P, ilo, jhi) == 0
-        @test neighbor(P, ilo, jlo) == 8  
+        @test neighbor(P, ilo, jlo) == 8
     end
 end
 
@@ -94,17 +97,17 @@ function test_4x4_topology_no_periodic()
     P = CartesianTopology(comm, [4,4], [false, false])
 
     # Layout for 4x4 domain; rank and (coords) are shown
-    
-    
+
+
     #   +----- (i)
     #   |
-    #   | 
+    #   |
     #   |  (j)
 
     #      ilo --> ihi
     #   |-------|-------|-------|-------|   jlo
     #   |       |       |       |       |    |
-    #   |   0   |   1   |   2   |   3   |    ↓   
+    #   |   0   |   1   |   2   |   3   |    ↓
     #   | (0,0) | (0,1) | (0,2) | (0,3) |   jhi
     #   |-------|-------|-------|-------|
     #   |       |       |       |       |
@@ -121,43 +124,43 @@ function test_4x4_topology_no_periodic()
     #   |-------|-------|-------|-------|
 
     if P.rank == 0 # test a corner
-        @test ilo_neighbor(P) == -1
+        @test ilo_neighbor(P) == NULL_PROC
         @test ihi_neighbor(P) == 1
-        @test jlo_neighbor(P) == -1
+        @test jlo_neighbor(P) == NULL_PROC
         @test jhi_neighbor(P) == 4
-        @test klo_neighbor(P) == -1
-        @test khi_neighbor(P) == -1
+        @test klo_neighbor(P) == NULL_PROC
+        @test khi_neighbor(P) == NULL_PROC
 
         @test neighbor(P, ihi, jhi) == 5
-        @test neighbor(P, ihi, jlo) == -1  
-        @test neighbor(P, ilo, jhi) == -1 
-        @test neighbor(P, ilo, jlo) == -1  
+        @test neighbor(P, ihi, jlo) == NULL_PROC
+        @test neighbor(P, ilo, jhi) == NULL_PROC
+        @test neighbor(P, ilo, jlo) == NULL_PROC
 
     elseif P.rank == 5 # test a middle node
         @test ilo_neighbor(P) == 4
         @test ihi_neighbor(P) == 6
         @test jlo_neighbor(P) == 1
         @test jhi_neighbor(P) == 9
-        @test klo_neighbor(P) == -1
-        @test khi_neighbor(P) == -1
-        
+        @test klo_neighbor(P) == NULL_PROC
+        @test khi_neighbor(P) == NULL_PROC
+
         @test neighbor(P, ihi, jhi) == 10
         @test neighbor(P, ihi, jlo) == 2
-        @test neighbor(P, ilo, jhi) == 8  
-        @test neighbor(P, ilo, jlo) == 0  
+        @test neighbor(P, ilo, jhi) == 8
+        @test neighbor(P, ilo, jlo) == 0
 
     elseif P.rank == 13 # test one on the edge
         @test ilo_neighbor(P) == 12
         @test ihi_neighbor(P) == 14
         @test jlo_neighbor(P) == 9
-        @test jhi_neighbor(P) == -1
-        @test klo_neighbor(P) == -1
-        @test khi_neighbor(P) == -1
-        
-        @test neighbor(P, ihi, jhi) == -1
+        @test jhi_neighbor(P) == NULL_PROC
+        @test klo_neighbor(P) == NULL_PROC
+        @test khi_neighbor(P) == NULL_PROC
+
+        @test neighbor(P, ihi, jhi) == NULL_PROC
         @test neighbor(P, ihi, jlo) == 10
-        @test neighbor(P, ilo, jhi) == -1
-        @test neighbor(P, ilo, jlo) == 8  
+        @test neighbor(P, ilo, jhi) == NULL_PROC
+        @test neighbor(P, ilo, jlo) == 8
     end
 end
 
