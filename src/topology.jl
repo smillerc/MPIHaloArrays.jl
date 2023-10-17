@@ -10,15 +10,15 @@ using LinearAlgebra: norm
 """An abstract AbstractParallelTopology type that is extended by either a CartesianTopology or GraphTopology (future)"""
 abstract type AbstractParallelTopology end
 
-global const I = 0
-global const J = 0
-global const K = 0
-global const ILO = -1
-global const IHI = +1
-global const JLO = -1
-global const JHI = +1
-global const KLO = -1
-global const KHI = +1
+const global I = 0
+const global J = 0
+const global K = 0
+const global ILO = -1
+const global IHI = +1
+const global JLO = -1
+const global JHI = +1
+const global KLO = -1
+const global KHI = +1
 
 
 """
@@ -43,7 +43,7 @@ struct CartesianTopology <: AbstractParallelTopology
     coords::NTuple{3,Int}    # [i, j, k]; coordinates in the toplogy
     global_dims::NTuple{3,Int} # [i, j, k]; number of domains in each direction
     isperiodic::NTuple{3,Bool} # [i, j, k]; is this dimension periodic?
-    neighbors::OffsetArray{Int, 3}   # [[ilo, center, ihi], i, j, k]; defaults to -1 if no neighbor
+    neighbors::OffsetArray{Int,3}   # [[ilo, center, ihi], i, j, k]; defaults to -1 if no neighbor
 end
 
 Base.size(C::CartesianTopology) = C.global_dims[1:C.dimension]
@@ -96,7 +96,7 @@ Create a CartesianTopology type that holds neighbor information, current rank, e
 P = CartesianTopology((4,4), (true, true))
 ```
 """
-function CartesianTopology(comm::MPI.Comm, dims::NTuple{N, Int}, periodicity::NTuple{N, Bool}; canreorder = false) where {N}
+function CartesianTopology(comm::MPI.Comm, dims::NTuple{N,Int}, periodicity::NTuple{N,Bool}; canreorder=false) where {N}
     dims = collect(dims)
     periodicity = collect(periodicity)
 
@@ -119,13 +119,13 @@ function CartesianTopology(comm::MPI.Comm, dims::NTuple{N, Int}, periodicity::NT
     periodicity_tuple = vec_to_ntuple(periodicity)
     topo_dim = length(dims)
 
-    neighbors = OffsetArray(Int(MPI.API.MPI_PROC_NULL[]) * ones(Int8,3,3,3), -1:1, -1:1, -1:1)
+    neighbors = OffsetArray(Int(MPI.API.MPI_PROC_NULL[]) * ones(Int8, 3, 3, 3), -1:1, -1:1, -1:1)
 
     # MPI convention is (k, j, i), or (z, y, x) which is annoying
     if topo_dim == 1
         ilo, ihi = MPI.Cart_shift(comm_cart, 0, 1)
 
-        neighbors[:,  0, 0] = [ilo, rank, ihi]
+        neighbors[:, 0, 0] = [ilo, rank, ihi]
 
     elseif topo_dim == 2
         jlo, jhi = MPI.Cart_shift(comm_cart, 0, 1)
@@ -136,9 +136,9 @@ function CartesianTopology(comm::MPI.Comm, dims::NTuple{N, Int}, periodicity::NT
         jhi_ilo = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, ILO, JHI)
         jlo_ilo = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, ILO, JLO)
 
-        neighbors[:,  1, 0] = [jhi_ilo, jhi , jhi_ihi]
-        neighbors[:,  0, 0] = [ilo    , rank, ihi]
-        neighbors[:, -1, 0] = [jlo_ilo, jlo , jlo_ihi]
+        neighbors[:, 1, 0] = [jhi_ilo, jhi, jhi_ihi]
+        neighbors[:, 0, 0] = [ilo, rank, ihi]
+        neighbors[:, -1, 0] = [jlo_ilo, jlo, jlo_ihi]
 
     elseif topo_dim == 3
         ilo, ihi = MPI.Cart_shift(comm_cart, 2, 1)
@@ -150,35 +150,35 @@ function CartesianTopology(comm::MPI.Comm, dims::NTuple{N, Int}, periodicity::NT
         jlo_ihi = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, IHI, JLO, K)
         jlo_ilo = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, ILO, JLO, K)
 
-        klo_jhi     = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, I  , JHI, KLO)
-        klo_jlo     = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, I  , JLO, KLO)
-        klo_ilo     = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, ILO, J  , KLO)
-        klo_ihi     = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, IHI, J  , KLO)
+        klo_jhi = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, I, JHI, KLO)
+        klo_jlo = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, I, JLO, KLO)
+        klo_ilo = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, ILO, J, KLO)
+        klo_ihi = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, IHI, J, KLO)
         klo_jhi_ihi = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, IHI, JHI, KLO)
         klo_jlo_ihi = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, IHI, JLO, KLO)
         klo_jhi_ilo = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, ILO, JHI, KLO)
         klo_jlo_ilo = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, ILO, JLO, KLO)
 
-        khi_jhi     = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, I  , JHI, KHI)
-        khi_jlo     = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, I  , JLO, KHI)
-        khi_ilo     = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, ILO, J  , KHI)
-        khi_ihi     = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, IHI, J  , KHI)
+        khi_jhi = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, I, JHI, KHI)
+        khi_jlo = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, I, JLO, KHI)
+        khi_ilo = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, ILO, J, KHI)
+        khi_ihi = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, IHI, J, KHI)
         khi_jhi_ihi = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, IHI, JHI, KHI)
         khi_jlo_ihi = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, IHI, JLO, KHI)
         khi_jhi_ilo = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, ILO, JHI, KHI)
         khi_jlo_ilo = offset_coord_to_rank(comm_cart, mpi_dims, mpi_periodicity, ILO, JLO, KHI)
 
         # Center
-        neighbors[:,  1, K] = [jhi_ilo, jhi , jhi_ihi]
-        neighbors[:,  0, K] = [ilo    , rank, ihi]
-        neighbors[:, -1, K] = [jlo_ilo, jlo , jlo_ihi]
+        neighbors[:, 1, K] = [jhi_ilo, jhi, jhi_ihi]
+        neighbors[:, 0, K] = [ilo, rank, ihi]
+        neighbors[:, -1, K] = [jlo_ilo, jlo, jlo_ihi]
 
-        neighbors[:,  1, KHI] = [khi_jhi_ilo, khi_jhi, khi_jhi_ihi]
-        neighbors[:,  0, KHI] = [khi_ilo    , khi    , khi_ihi]
+        neighbors[:, 1, KHI] = [khi_jhi_ilo, khi_jhi, khi_jhi_ihi]
+        neighbors[:, 0, KHI] = [khi_ilo, khi, khi_ihi]
         neighbors[:, -1, KHI] = [khi_jlo_ilo, khi_jlo, khi_jlo_ihi]
 
-        neighbors[:,  1, KLO] = [klo_jhi_ilo, klo_jhi, klo_jhi_ihi]
-        neighbors[:,  0, KLO] = [klo_ilo    , klo    , klo_ihi]
+        neighbors[:, 1, KLO] = [klo_jhi_ilo, klo_jhi, klo_jhi_ihi]
+        neighbors[:, 0, KLO] = [klo_ilo, klo, klo_ihi]
         neighbors[:, -1, KLO] = [klo_jlo_ilo, klo_jlo, klo_jlo_ihi]
 
     end
@@ -186,8 +186,8 @@ function CartesianTopology(comm::MPI.Comm, dims::NTuple{N, Int}, periodicity::NT
     CartesianTopology(comm_cart, nprocs, rank, topo_dim, coords_tuple, dims_tuple, periodicity_tuple, neighbors)
 end
 
-function CartesianTopology(comm::MPI.Comm, dims::Vector{Int}, periodicity::Vector{Bool}; canreorder = false) where {N}
-    CartesianTopology(comm, tuple(dims...), tuple(periodicity...); canreorder = canreorder)
+function CartesianTopology(comm::MPI.Comm, dims::Vector{Int}, periodicity::Vector{Bool}; canreorder=false)
+    CartesianTopology(comm, tuple(dims...), tuple(periodicity...); canreorder=canreorder)
 end
 
 """
@@ -196,8 +196,8 @@ end
 Create CartesianTopology only with the vector of boundary periodicity given. This finds the
 optimal sub-domain ordering for the user.
 """
-function CartesianTopology(comm::MPI.Comm, nprocs::Int, periodicity::Bool; canreorder = false)
-    CartesianTopology(comm, nprocs, tuple(periodicity); canreorder = canreorder)
+function CartesianTopology(comm::MPI.Comm, nprocs::Int, periodicity::Bool; canreorder=false)
+    CartesianTopology(comm, nprocs, tuple(periodicity); canreorder=canreorder)
 end
 
 """
@@ -206,7 +206,7 @@ end
 Create CartesianTopology only with the vector of boundary periodicity given. This finds the
 optimal sub-domain ordering for the user.
 """
-function CartesianTopology(comm::MPI.Comm, nprocs::Int, periodicity::NTuple{N,Bool}; canreorder = false) where {N}
+function CartesianTopology(comm::MPI.Comm, nprocs::Int, periodicity::NTuple{N,Bool}; canreorder=false) where {N}
     if length(periodicity) == 3
         dims = num_3d_tiles(nprocs)
     elseif length(periodicity) == 2
@@ -215,10 +215,10 @@ function CartesianTopology(comm::MPI.Comm, nprocs::Int, periodicity::NTuple{N,Bo
         dims = tuple(nprocs)
     end
 
-    CartesianTopology(comm, dims, periodicity; canreorder = canreorder)
+    CartesianTopology(comm, dims, periodicity; canreorder=canreorder)
 end
 
-function vec_to_ntuple(v::Vector{T}) where {T <: Number}
+function vec_to_ntuple(v::Vector{T}) where {T<:Number}
     if length(v) < 3
         return vcat(v, zeros(T, 3 - length(v))) |> Tuple
     else
@@ -287,19 +287,19 @@ end
 ilo_neighbor(p::CartesianTopology) = p.neighbors[-1, 0, 0]
 
 """Neighbor rank in the i+1 direction"""
-ihi_neighbor(p::CartesianTopology) = p.neighbors[ 1, 0, 0]
+ihi_neighbor(p::CartesianTopology) = p.neighbors[1, 0, 0]
 
 """Neighbor rank in the j-1 direction"""
-jlo_neighbor(p::CartesianTopology) = p.neighbors[ 0,-1, 0]
+jlo_neighbor(p::CartesianTopology) = p.neighbors[0, -1, 0]
 
 """Neighbor rank in the j+1 direction"""
-jhi_neighbor(p::CartesianTopology) = p.neighbors[ 0, 1, 0]
+jhi_neighbor(p::CartesianTopology) = p.neighbors[0, 1, 0]
 
 """Neighbor rank in the k-1 direction"""
-klo_neighbor(p::CartesianTopology) = p.neighbors[ 0, 0,-1]
+klo_neighbor(p::CartesianTopology) = p.neighbors[0, 0, -1]
 
 """Neighbor rank in the k+1 direction"""
-khi_neighbor(p::CartesianTopology) = p.neighbors[ 0, 0, 1]
+khi_neighbor(p::CartesianTopology) = p.neighbors[0, 0, 1]
 
 """
     neighbor(p::CartesianTopology, i_offset::Int, j_offset::Int, k_offset::Int)
@@ -471,12 +471,12 @@ end
 
 
 
-function global_to_subdomain_bounds(globalarraysize::NTuple{1,T}, topology::CartesianTopology,p) where {T <: Integer}
+function global_to_subdomain_bounds(globalarraysize::NTuple{1,T}, topology::CartesianTopology, p) where {T<:Integer}
     ilo, ihi = tile_indices_1d1(globalarraysize[1], topology.global_dims[1], topology.coords[1])
     return (ilo, ihi)
 end
 
-function global_to_subdomain_bounds(globalarraysize::NTuple{2,T}, topology::CartesianTopology,p) where {T <: Integer}
+function global_to_subdomain_bounds(globalarraysize::NTuple{2,T}, topology::CartesianTopology, p) where {T<:Integer}
     # @show globalarraysize
     # @show topology.global_dims
     # @show topology.coords
@@ -492,7 +492,7 @@ function global_to_subdomain_bounds(globalarraysize::NTuple{2,T}, topology::Cart
     return (ilo, ihi, jlo, jhi)
 end
 
-function global_to_subdomain_bounds(globalarraysize::NTuple{3,T}, topology::CartesianTopology,p) where {T <: Integer}
+function global_to_subdomain_bounds(globalarraysize::NTuple{3,T}, topology::CartesianTopology, p) where {T<:Integer}
     ilo, ihi = tile_indices_1d1(globalarraysize[1], topology.global_dims[1], topology.coords[1])
     jlo, jhi = tile_indices_1d1(globalarraysize[2], topology.global_dims[2], topology.coords[2])
     klo, khi = tile_indices_1d1(globalarraysize[3], topology.global_dims[3], topology.coords[3])
