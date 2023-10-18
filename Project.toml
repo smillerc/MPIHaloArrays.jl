@@ -1,7 +1,7 @@
 name = "MPIHaloArrays"
 uuid = "e77e6532-e7cc-40ad-aebc-b383a150aff6"
 authors = ["Miller, Samuel <smil@lle.rochester.edu>"]
-version = "0.4.0"
+version = "0.4.1"
 
 [deps]
 EllipsisNotation = "da5c29d0-fa7d-589e-88eb-ea29b0a81949"
