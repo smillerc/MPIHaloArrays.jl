@@ -262,7 +262,7 @@ function updatehalo!(A::MPIHaloArray{T,N,AA,1}) where {T,N,AA}
         push!(send_rec_req, ilo_rreq, ihi_sreq)
     end
 
-    MPI.Waitall!(send_rec_req)
+    MPI.Waitall(send_rec_req, MPI.Status)
 
     return nothing
 end
@@ -392,7 +392,7 @@ function updatehalo!(A::MPIHaloArray{T,N,AA,2}) where {T,N,AA}
     end
 
 
-    MPI.Waitall!(send_rec_req)
+    MPI.Waitall(send_rec_req, MPI.Status)
 
     return nothing
 end
@@ -750,7 +750,7 @@ function updatehalo!(A::MPIHaloArray{T,N,AA,3}) where {T,N,AA}
         end
     end
 
-    MPI.Waitall!(send_rec_req)
+    MPI.Waitall(send_rec_req, MPI.Status)
 
     return nothing
 end

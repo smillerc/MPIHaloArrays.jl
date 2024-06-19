@@ -111,7 +111,7 @@ function CartesianTopology(comm::MPI.Comm, dims::NTuple{N,Int}, periodicity::NTu
     @assert length(dims) == length(periodicity) "You must specify periodicity (true/false) for each dimension"
     @assert prod(dims) == nprocs "The number of subdomains ($(prod(dims))) doesn't match the number of procs ($(nprocs)) provided"
 
-    comm_cart = MPI.Cart_create(comm, mpi_dims, mpi_periodicity .|> Int, canreorder)
+    comm_cart = MPI.Cart_create(comm, mpi_dims; periodic = mpi_periodicity, reorder = canreorder)
     coords = MPI.Cart_coords(comm_cart) |> reverse
 
     coords_tuple = vec_to_ntuple(coords)

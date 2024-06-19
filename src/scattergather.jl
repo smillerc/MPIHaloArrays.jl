@@ -46,7 +46,7 @@ function scatterglobal(A::AbstractArray{T, 1}, root::Int, nhalo::Int,
     rreq = MPI.Irecv!(remote_buf, root, recievetag, topology.comm)
     push!(reqs, rreq)
 
-    MPI.Waitall!(reqs)
+    MPI.Waitall(reqs, MPI.Status)
     return MPIHaloArray(A_local, topology, nhalo; do_corners = do_corners, com_model = com_model)
 end
 
@@ -86,7 +86,7 @@ function scatterglobal(A::AbstractArray{T, 2}, root::Int, nhalo::Int,
     rreq = MPI.Irecv!(remote_buf, root, recievetag, topology.comm)
     push!(reqs, rreq)
 
-    MPI.Waitall!(reqs)
+    MPI.Waitall(reqs, MPI.Status)
     return MPIHaloArray(A_local, topology, nhalo; do_corners = do_corners, com_model = com_model)
 end
 
@@ -127,7 +127,7 @@ function scatterglobal(A::AbstractArray{T, 3}, root::Int, nhalo::Int,
     rreq = MPI.Irecv!(remote_buf, root, recievetag, topology.comm)
     push!(reqs, rreq)
 
-    MPI.Waitall!(reqs)
+    MPI.Waitall(reqs, MPI.Status)
     return MPIHaloArray(A_local, topology, nhalo; do_corners = do_corners, com_model = com_model)
 end
 
@@ -184,7 +184,7 @@ function gatherglobal(A::MPIHaloArray{T,N,AA,1}; root=0) where {T,N,AA}
         A_global = nothing
     end
 
-    MPI.Waitall!(reqs)
+    MPI.Waitall(reqs, MPI.Status)
     return A_global
 end
 
@@ -233,7 +233,7 @@ function gatherglobal(A::MPIHaloArray{T,N,AA,2}; root=0) where {T,N,AA}
         A_global = nothing
     end
 
-    MPI.Waitall!(reqs)
+    MPI.Waitall(reqs, MPI.Status)
     return A_global
 end
 
@@ -282,7 +282,7 @@ function gatherglobal(A::MPIHaloArray{T,N,AA,3}; root=0) where {T,N,AA}
         A_global = nothing
     end
 
-    MPI.Waitall!(reqs)
+    MPI.Waitall(reqs, MPI.Status)
     return A_global
 end
 
