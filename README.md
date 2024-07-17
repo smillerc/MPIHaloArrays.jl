@@ -51,7 +51,7 @@ nhalo = 2 # Number of halo cells in each dimension (fixed for all dimensions)
 N = 200
 
 # create the array type; this pads the data on all sides with halo regions
-x = MPIHaloArray(rand(N,N), topo, nhalo)
+A = MPIHaloArray(rand(N,N), topo, nhalo)
 
 # fill all the halo regions with -1
 fillhalo!(A, -1)
@@ -63,10 +63,10 @@ filldomain!(A, rank)
 A[1,1] .= 2.0
 
 # Get the local/global indices of the _domain_ data (not including the halo cells)
-ilo, ihi, jlo, jhi = local_domain_indices(x) # -> useful for looping without going into halo regions
+ilo, ihi, jlo, jhi = local_domain_indices(A) # -> useful for looping without going into halo regions
 
 # Exchange data with neighbors
-updatehalo!(x)
+updatehalo!(A)
 
 GC.gc()
 MPI.Finalize()
